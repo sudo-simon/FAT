@@ -1,6 +1,6 @@
 # FAT - Fake Awesome Terminal
 
-<img src="./img/title.gif" alt="Title IMG" width=1000/>
+<img src="./img/title.gif" alt="Title IMG" width=1200/>
 
 Operating Systems 2021/2022 project
 
