@@ -4,7 +4,6 @@
 // My headers
 #include "../constants.h"
 #include "../cli/shell.h"
-#include "commands.h"
 
 
 /*

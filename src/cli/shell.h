@@ -1,5 +1,8 @@
 #pragma once
 
+/*
+Clears the terminal screen at shell initialization
+*/
 #define clear_all() printf("\033[H\033[J")
 
 int shell_init();
