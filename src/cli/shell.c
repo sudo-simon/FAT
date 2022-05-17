@@ -11,27 +11,20 @@
 #include "commands.h"
 #include "shell.h"
 
+extern char* USER;
 
-
-/*
-Shell initialization
-*/
 int shell_init(){   //TODO: checks di corretta init
 
-    char* user = getenv("USERNAME");
     char* time = current_time_str();
     clear_all();
-    printf("\n---------- FAT - Fake Awesome Terminal ----------\n\n");
-    printf("%s\n    User: %s\n",time,user);
+    printf("---------- FAT - Fake Awesome Terminal ----------\n\n");
+    printf("%s\n",time);
     free(time);
     return 0;
 
 }
 
 
-/*
-Gets the current date and time and formats it to a string
-*/
 char* current_time_str(){
 
     char* str_time = malloc(32*sizeof(char));
@@ -92,13 +85,10 @@ char* current_time_str(){
 }
 
 
-/*
-Takes teh user input and also implements the command history
-*/
-int take_input(char *input_buf){
+int take_input(char *input_buf, char* input_msg){
 
     char* buf = malloc(MAX_INPUT_LEN*sizeof(char));
-    buf = readline("\n>>> ");
+    buf = readline(input_msg);
     int input_length = strlen(buf);
     if (input_length > 0){
         add_history(buf);
@@ -119,13 +109,10 @@ int take_input(char *input_buf){
 }
 
 
-/*
-Splits the input string in a maximum of 2 space separated substrings
-*/
 int str_split(char *in, char **out){
 
     int n = 0, current_word_index = 0;
-    char c;
+    char c, prev_c;
     for(int i=0; i<strlen(in); ++i){
         if (n < 2){
             c = in[i];
@@ -133,9 +120,12 @@ int str_split(char *in, char **out){
                 out[n][current_word_index++] = c;
             }
             else{
-                ++n;
-                current_word_index = 0;
+                if (prev_c != ' '){
+                    ++n;
+                    current_word_index = 0;
+                }
             }
+            prev_c = c;
         }
         else break;
     }
