@@ -1,3 +1,18 @@
 #! /bin/bash
 
-x-terminal-emulator -e ./src/fat.bin
+if [[ -z $1 ]]
+    then
+        x-terminal-emulator -e ./src/fat.bin
+    else
+        if (( $# > 1 ))
+            then
+                echo "Too many arguments"
+            else
+                if [[ "$1" != "_current_session_" ]]
+                    then
+                        x-terminal-emulator -e ./src/fat.bin "$1"
+                    else
+                        echo "\"_current_session_\" can't be passed as an argument"
+                fi
+        fi
+fi

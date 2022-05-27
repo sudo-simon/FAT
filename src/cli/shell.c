@@ -112,22 +112,38 @@ int take_input(char *input_buf, char* input_msg){
 int str_split(char *in, char **out){
 
     int n = 0, current_word_index = 0;
-    char c, prev_c;
+    char c = '\0', prev_c = '\0';
+    //boolean used to check if quotes are being used to define a single word
+    char in_quotes = 0;
+
     for(int i=0; i<strlen(in); ++i){
         if (n < 2){
             c = in[i];
-            if (c != ' ' && c != '\n' && c != '\0'){
-                out[n][current_word_index++] = c;
+            if (c == '\'' || c == '\"'){
+                //bitwise xor to swap between 0 and 1
+                in_quotes = in_quotes^0x1;
+                continue;
             }
+            if(in_quotes)
+                out[n][current_word_index++] = c;
             else{
-                if (prev_c != ' '){
-                    ++n;
-                    current_word_index = 0;
+                if (c != ' '){
+                    out[n][current_word_index++] = c;
+                }
+                else{
+                    if (prev_c != ' '){
+                        ++n;
+                        current_word_index = 0;
+                    }
                 }
             }
             prev_c = c;
         }
         else break;
+    }
+    if(in_quotes){
+        printf("Error: bad command formatting, odd number of quotes\n");
+        return -1;
     }
     return n;
 

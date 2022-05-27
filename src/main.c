@@ -1,15 +1,51 @@
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <string.h>
+#include <pthread.h>
+#include <signal.h>
 // My headers
 #include "constants.h"
 #include "cli/shell.h"
 #include "cli/commands.h"
 
 
+// 8 MiB mmapped disk
+char DISK[8388608];
+
+
+int _open_session(char* session_name){
+    //TODO
+    printf("Open session called, yet to be implemented");
+    return 0;
+}
 
 
 int main(int argc, char** argv){
+
+    //TODO: possibilità di passare un parametro: nome del file su cui è stata salvata una sessione FAT
+    //TODO: oppure una stringa speciale (es. current_session) per aprire un nuovo terminale sulla
+    //TODO: sessione corrente che lavora in simultanea (threading)
+
+    // Argument passing, either the name of a session file or "_current_session_"
+    char* new_session = NULL;
+    if (argc > 1){
+        new_session = argv[1];
+        //TODO: sostituire con i signal (SIGUSR?)
+        if (strcmp(new_session, "_fork_test_") == 0){
+            __pid_t child_pid = fork();
+            if (child_pid)
+                printf("I am your father.\n");
+            else{
+                printf("Noooooooooooooooooo\n");
+                exit(0);
+            }
+            return 69;
+        }
+        _open_session(new_session);
+    }
+
 
     // Input strings buffers
     char* input_msg = malloc(128*sizeof(char));
@@ -19,10 +55,13 @@ int main(int argc, char** argv){
     char** split_input = malloc(2*sizeof(char*));
     split_input[0] = malloc(MAX_INPUT_LEN*sizeof(char));
     split_input[1] = malloc(MAX_INPUT_LEN*sizeof(char));
+    int n_args;
     short cmd_index;
 
     shell_init();
-
+    //DEBUG
+    if(new_session) printf("\n\nArgument passed! arg = %s",new_session);
+    
     // Main loop
     while(1){
 
@@ -34,8 +73,8 @@ int main(int argc, char** argv){
         cmd_index = -1;
 
         take_input(input,input_msg);
+        n_args = str_split(input, split_input);
 
-        int n_args = str_split(input, split_input);
         if (n_args > 1){
             printf("Too many command arguments (max 1)");
             continue;

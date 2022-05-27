@@ -16,8 +16,7 @@ int _quit(void* arg){
 
 
 int _clear(void* args){
-    shell_init();
-    return 0;
+    return shell_init();
 }
 
 
