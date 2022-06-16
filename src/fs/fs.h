@@ -11,7 +11,7 @@ int _fs_write();
 
 int _fs_read();
 
-int _fs_seek(char* file_name);  //TODO: chiedere a cosa si riferisca nel dettaglio
+int _fs_seek(char* file_name);  //TODO: find??
 
 int _fs_createDir(char* dir_name);
 

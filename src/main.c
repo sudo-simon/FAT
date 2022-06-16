@@ -3,22 +3,59 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-#include <pthread.h>
-#include <signal.h>
+//#include <pthread.h>
+//#include <signal.h>
+#include <sys/mman.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 // My headers
 #include "constants.h"
 #include "cli/shell.h"
 #include "cli/commands.h"
 
+char DEBUG_FLAG = 0;
 
-// 8 MiB mmapped disk
-char DISK[8388608];
+// DISK_SIZE mmapped disk
+char* DISK;
+char DISK_mmapped_flag = 0;
+
+// FAT as a buffer, best way to do it?
+int FAT[DISK_SIZE/BLOCK_SIZE];
 
 
-int _open_session(char* session_name){
-    //TODO
-    printf("Open session called, yet to be implemented");
+int _open_session(char* session_filename){
+
+    // No previous session file opened
+    if (!session_filename){
+        DISK = malloc(DISK_SIZE*sizeof(char));
+    }
+    // Existing session file to be opened
+    else{
+        if(access(session_filename, F_OK)){
+            printf("The file %s does not exist",session_filename);
+            DEBUG_FLAG = 1;
+            return -1;
+        }
+        int session_fd = open(
+            session_filename,
+            0,
+            O_RDWR
+        );
+        DISK = mmap(
+            NULL,
+            DISK_SIZE,
+            PROT_READ | PROT_WRITE,
+            MAP_PRIVATE | MAP_POPULATE,
+            session_fd,
+            0
+        );
+        DISK_mmapped_flag = 1;
+    }
+
+    printf("Open session called, yet to be implemented\n");
     return 0;
+
 }
 
 
@@ -28,23 +65,22 @@ int main(int argc, char** argv){
     //TODO: oppure una stringa speciale (es. current_session) per aprire un nuovo terminale sulla
     //TODO: sessione corrente che lavora in simultanea (threading)
 
-    // Argument passing, either the name of a session file or "_current_session_"
-    char* new_session = NULL;
+    // Argument passing, either the name of a session file or "_fork_test_ (DEBUGGING)"
+    char* session_filename = NULL;
     if (argc > 1){
-        new_session = argv[1];
+        session_filename = argv[1];
         //TODO: sostituire con i signal (SIGUSR?)
-        if (strcmp(new_session, "_fork_test_") == 0){
+        if (strcmp(session_filename, "_fork_test_") == 0){
             __pid_t child_pid = fork();
             if (child_pid)
-                printf("I am your father.\n");
+                printf("Process, I am your father.\n");
             else{
                 printf("Noooooooooooooooooo\n");
                 exit(0);
             }
-            return 69;
         }
-        _open_session(new_session);
     }
+    _open_session(session_filename);
 
 
     // Input strings buffers
@@ -57,10 +93,12 @@ int main(int argc, char** argv){
     split_input[1] = malloc(MAX_INPUT_LEN*sizeof(char));
     int n_args;
     short cmd_index;
+    int cmd_ret_value;
 
     shell_init();
     //DEBUG
-    if(new_session) printf("\n\nArgument passed! arg = %s",new_session);
+    if(session_filename) printf("\n\nArgument passed! arg = %s\n",session_filename);
+    if(DEBUG_FLAG) printf("File passed as argument does not exist");
     
     // Main loop
     while(1){
@@ -98,13 +136,21 @@ int main(int argc, char** argv){
                     free(split_input[0]);
                     free(split_input[1]);
                     free(split_input);
+                    if (DISK_mmapped_flag){
+                        if(munmap(DISK, DISK_SIZE)){
+                            printf("ERROR: mmunmap(DISK) not succesful\n");
+                            return -1;
+                        }
+                    }
+                    else
+                        free(DISK);
                 }
                 else{
                     printf("quit doesn't take any arguments");
                     continue;
                 }
             }
-            int cmd_ret_value = (*FN_ARRAY[cmd_index])((void*)split_input[1]);
+            cmd_ret_value = (*FN_ARRAY[cmd_index])((void*)split_input[1]);
         }
         // Invalid command
         else{
