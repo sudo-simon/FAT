@@ -3,7 +3,7 @@ CCOPTS = -Wall -std=gnu99 -g
 AR = ar
 
 BINS = fat.bin
-OBJS = ./cli/shell.o ./cli/commands.o
+OBJS = ./cli/shell.o ./cli/commands.o 
 HEADERS = constants.h ./cli/shell.h ./cli/commands.h
 LIBS = 
 

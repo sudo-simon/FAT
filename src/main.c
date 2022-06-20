@@ -18,7 +18,7 @@ char DEBUG_FLAG = 0;
 
 // DISK_SIZE mmapped disk
 char* DISK;
-char DISK_mmapped_flag = 0;
+char MMAPPED_DISK_FLAG = 0;
 
 // FAT as a buffer, best way to do it?
 int FAT[DISK_SIZE/BLOCK_SIZE];
@@ -37,11 +37,13 @@ int _open_session(char* session_filename){
             DEBUG_FLAG = 1;
             return -1;
         }
+
         int session_fd = open(
             session_filename,
             0,
             O_RDWR
         );
+
         DISK = mmap(
             NULL,
             DISK_SIZE,
@@ -50,7 +52,8 @@ int _open_session(char* session_filename){
             session_fd,
             0
         );
-        DISK_mmapped_flag = 1;
+        
+        MMAPPED_DISK_FLAG = 1;
     }
 
     printf("Open session called, yet to be implemented\n");
@@ -72,10 +75,12 @@ int main(int argc, char** argv){
         //TODO: sostituire con i signal (SIGUSR?)
         if (strcmp(session_filename, "_fork_test_") == 0){
             __pid_t child_pid = fork();
-            if (child_pid)
-                printf("Process, I am your father.\n");
+            if (child_pid){
+                system("x-terminal-emulator -e \"echo 'Process, I am your father.' && sleep 3\"");
+
+            }
             else{
-                printf("Noooooooooooooooooo\n");
+                system("x-terminal-emulator -e \"echo 'Noooooooooooooooooo' && sleep 6\"");
                 exit(0);
             }
         }
@@ -132,11 +137,12 @@ int main(int argc, char** argv){
             // if cmd == quit buffers get freed
             if (strcmp(split_input[0],"quit") == 0){
                 if (n_args == 0){
+                    free(input_msg);
                     free(input);
                     free(split_input[0]);
                     free(split_input[1]);
                     free(split_input);
-                    if (DISK_mmapped_flag){
+                    if (MMAPPED_DISK_FLAG){
                         if(munmap(DISK, DISK_SIZE)){
                             printf("ERROR: mmunmap(DISK) not succesful\n");
                             return -1;
@@ -150,7 +156,10 @@ int main(int argc, char** argv){
                     continue;
                 }
             }
+
+            // Effective command call from function pointers array 
             cmd_ret_value = (*FN_ARRAY[cmd_index])((void*)split_input[1]);
+        
         }
         // Invalid command
         else{

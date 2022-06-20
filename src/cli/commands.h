@@ -97,6 +97,7 @@ const static char* CMD_ARRAY[TOTAL_COMMANDS] = {
     "cd",       // 9
     "ls",       // 10
     "edit"      // 11
+    //TODO: comando FAT <--new / file> per apertura di fork()?
 };
 
 /*
