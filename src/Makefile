@@ -3,8 +3,8 @@ CCOPTS = -Wall -std=gnu99 -g
 AR = ar
 
 BINS = fat.bin
-OBJS = ./cli/shell.o ./cli/commands.o 
-HEADERS = constants.h ./cli/shell.h ./cli/commands.h
+OBJS = ./cli/shell.o ./cli/commands.o ./fs/fat.o ./fs/file.o ./fs/functions.o
+HEADERS = constants.h ./cli/shell.h ./cli/commands.h ./fs/fat.h ./fs/file.h ./fs/functions.h
 LIBS = 
 
 %.o: %.c $(HEADERS)

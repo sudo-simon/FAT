@@ -13,6 +13,7 @@
 #include "constants.h"
 #include "cli/shell.h"
 #include "cli/commands.h"
+#include "fs/fat.h"
 
 char DEBUG_FLAG = 0;
 
@@ -20,15 +21,15 @@ char DEBUG_FLAG = 0;
 char* DISK;
 char MMAPPED_DISK_FLAG = 0;
 
-// FAT as a buffer, best way to do it?
-int FAT[DISK_SIZE/BLOCK_SIZE];
+// FAT struct
+FAT_STRUCT* FAT;
 
 
 int _open_session(char* session_filename){
 
     // No previous session file opened
     if (!session_filename){
-        DISK = malloc(DISK_SIZE*sizeof(char));
+        DISK = calloc(DISK_SIZE,sizeof(char));
     }
     // Existing session file to be opened
     else{
@@ -55,6 +56,9 @@ int _open_session(char* session_filename){
         
         MMAPPED_DISK_FLAG = 1;
     }
+
+    // Allocation of FAT
+    FAT = calloc(1,sizeof(FAT_STRUCT));
 
     printf("Open session called, yet to be implemented\n");
     return 0;
@@ -86,6 +90,7 @@ int main(int argc, char** argv){
         }
     }
     _open_session(session_filename);
+    int first_FAT_block = _FAT_init(MMAPPED_DISK_FLAG);
 
 
     // Input strings buffers
@@ -101,7 +106,7 @@ int main(int argc, char** argv){
     int cmd_ret_value;
 
     shell_init();
-    //DEBUG
+    //DEBUG CODE
     if(session_filename) printf("\n\nArgument passed! arg = %s\n",session_filename);
     if(DEBUG_FLAG) printf("File passed as argument does not exist");
     
@@ -148,8 +153,10 @@ int main(int argc, char** argv){
                             return -1;
                         }
                     }
-                    else
+                    else{
                         free(DISK);
+                        free(FAT);
+                    }
                 }
                 else{
                     printf("quit doesn't take any arguments");
