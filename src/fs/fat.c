@@ -3,11 +3,8 @@
 // My headers
 #include "fat.h"
 
-extern FAT_STRUCT* FAT;
-extern char* DISK;
 
-
-int _FAT_init(char MMAPPED_DISK_FLAG) {
+int _FAT_init(FAT_STRUCT* FAT, DISK_STRUCT* DISK, char MMAPPED_DISK_FLAG){
 
     if (!MMAPPED_DISK_FLAG){
         for (int i=0; i<FAT_ENTRIES; ++i){
@@ -21,38 +18,44 @@ int _FAT_init(char MMAPPED_DISK_FLAG) {
                 FAT->next[i] = -1;
             }
         }
-        memcpy(DISK, FAT, FAT_SIZE);
+        memcpy(DISK->disk, FAT, FAT_SIZE);
     }
+
     else{
-        memcpy(FAT, DISK, FAT_SIZE);
+        memcpy(FAT, DISK->disk, FAT_SIZE);
     }
+
     return FAT_RESERVED_BLOCKS;
 }
 
 
-char _FAT_EOF(int disk_index){
-    if (FAT->next[disk_index] == -1)
+void _FAT_destroy(FAT_STRUCT* FAT){
+    free(FAT);
+}
+
+
+char _FAT_EOF(FAT_STRUCT* FAT, int block_index){
+    if (FAT->next[block_index] == -1)
         return 1;
     else
         return 0;
 }
 
 
-char* _FAT_getNextBlock(int disk_index){
-    int next_i = FAT->next[disk_index];
-    return DISK+(next_i*BLOCK_SIZE);
+int _FAT_getNextBlock(FAT_STRUCT* FAT, int block_index){
+    return FAT->next[block_index];
 }
 
 
-int _FAT_setNextBlock(int disk_index, int next_index){
-    FAT->next[disk_index] = next_index;
+int _FAT_setNextBlock(FAT_STRUCT* FAT, int block_index, int next_index){
+    FAT->next[block_index] = next_index;
     FAT->next[next_index] = -1;
     FAT->isFull[next_index] = 1;
     return 0;
 }
 
 
-int _FAT_findFirstFreeBlock(){
+int _FAT_findFirstFreeBlock(FAT_STRUCT* FAT){
     int index = FAT_RESERVED_BLOCKS;
     while (index<FAT_ENTRIES){
         if (FAT->isFull[index] == 0) break;
@@ -63,7 +66,16 @@ int _FAT_findFirstFreeBlock(){
 }
 
 
-void _FAT_deleteBlock(int disk_index){
-    FAT->isFull[disk_index] = 0;
+int _FAT_allocateBlock(FAT_STRUCT* FAT, int block_index){
+    if (FAT->isFull[block_index] == 0){
+        FAT->isFull[block_index] = 1;
+        return 0; 
+    }     
+    else return -1;
+}
+
+
+void _FAT_deallocateBlock(FAT_STRUCT* FAT, int block_index){
+    FAT->isFull[block_index] = 0;
     return;
 }

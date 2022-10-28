@@ -13,69 +13,41 @@
 #include "constants.h"
 #include "cli/shell.h"
 #include "cli/commands.h"
+#include "fs/disk.h"
 #include "fs/fat.h"
+#include "fs/file.h"
 
 char DEBUG_FLAG = 0;
 
 // DISK_SIZE mmapped disk
-char* DISK;
-char MMAPPED_DISK_FLAG = 0;
+//char* DISK;
+//char MMAPPED_DISK_FLAG = 0;
+
+// DISK struct
+DISK_STRUCT* DISK;
 
 // FAT struct
 FAT_STRUCT* FAT;
 
-
-int _open_session(char* session_filename){
-
-    // No previous session file opened
-    if (!session_filename){
-        DISK = calloc(DISK_SIZE,sizeof(char));
-    }
-    // Existing session file to be opened
-    else{
-        if(access(session_filename, F_OK)){
-            printf("The file %s does not exist",session_filename);
-            DEBUG_FLAG = 1;
-            return -1;
-        }
-
-        int session_fd = open(
-            session_filename,
-            0,
-            O_RDWR
-        );
-
-        DISK = mmap(
-            NULL,
-            DISK_SIZE,
-            PROT_READ | PROT_WRITE,
-            MAP_PRIVATE | MAP_POPULATE,
-            session_fd,
-            0
-        );
-        
-        MMAPPED_DISK_FLAG = 1;
-    }
-
-    // Allocation of FAT
-    FAT = calloc(1,sizeof(FAT_STRUCT));
-
-    printf("Open session called, yet to be implemented\n");
-    return 0;
-
-}
+// CWD (Current Working Directory)
+FileHandle* CWD;
 
 
 int main(int argc, char** argv){
+
+    // ------------------------------------------------------------------------------------------ //
+    // Argument passing and initializations (DISK, FAT, CWD)
 
     //TODO: possibilità di passare un parametro: nome del file su cui è stata salvata una sessione FAT
     //TODO: oppure una stringa speciale (es. current_session) per aprire un nuovo terminale sulla
     //TODO: sessione corrente che lavora in simultanea (threading)
 
     // Argument passing, either the name of a session file or "_fork_test_ (DEBUGGING)"
+
     char* session_filename = NULL;
     if (argc > 1){
         session_filename = argv[1];
+
         //TODO: sostituire con i signal (SIGUSR?)
         if (strcmp(session_filename, "_fork_test_") == 0){
             __pid_t child_pid = fork();
@@ -88,9 +60,34 @@ int main(int argc, char** argv){
                 exit(0);
             }
         }
+
     }
-    _open_session(session_filename);
-    int first_FAT_block = _FAT_init(MMAPPED_DISK_FLAG);
+    
+
+    // DISK initialization with error checks
+    DISK = calloc(1,sizeof(DISK_STRUCT));
+    if (_DISK_init(DISK, session_filename)){
+        printf("[ERROR] %s is not a valid session file!",session_filename);
+        exit(-1);
+        return 0;
+    }
+
+    // FAT initialization
+    FAT = calloc(1,sizeof(FAT_STRUCT));
+    int root_block_index = _FAT_init(FAT, DISK, DISK->mmappedFlag);
+
+    // CWD initialization
+    if (! DISK->mmappedFlag)
+        CWD = _FILE_initRoot(DISK, FAT);
+    else
+        CWD = _FILE_getRoot(DISK, FAT);
+
+
+
+
+
+    // ------------------------------------------------------------------------------------------ //
+    // Main cycle
 
 
     // Input strings buffers
@@ -147,16 +144,20 @@ int main(int argc, char** argv){
                     free(split_input[0]);
                     free(split_input[1]);
                     free(split_input);
-                    if (MMAPPED_DISK_FLAG){
-                        if(munmap(DISK, DISK_SIZE)){
-                            printf("ERROR: mmunmap(DISK) not succesful\n");
-                            return -1;
-                        }
+
+                    // DEBUG CODE
+                    /*printf(
+                        "DEBUG:\nDISK->disk = %ld \nDISK->mmappedFlag = %d \nDISK->sessionFd = %d\n\n",
+                        DISK->disk,
+                        DISK->mmappedFlag,
+                        DISK->sessionFd
+                    );*/
+
+                    if (_DISK_destroy(DISK)){
+                        printf("[ERROR] Unable to munmap DISK!\n");
+                        continue;
                     }
-                    else{
-                        free(DISK);
-                        free(FAT);
-                    }
+                    _FAT_destroy(FAT);
                 }
                 else{
                     printf("quit doesn't take any arguments");
