@@ -7,6 +7,8 @@
 #include "../fs/functions.h"
 
 
+//TODO: extern DISK, FAT, CWD and O_FILE
+
 
 int _quit(void* arg){
     printf("Exiting FAT...\n");

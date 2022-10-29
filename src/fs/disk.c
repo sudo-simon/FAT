@@ -19,7 +19,7 @@ int _DISK_init(DISK_STRUCT* DISK, char* session_filename){
 
     // Existing session file to be opened
     if (session_filename != NULL) {
-        if(access(session_filename, F_OK)){
+        if(access(session_filename, R_OK | W_OK) != 0){
             return -1;
         }
 
@@ -48,6 +48,7 @@ int _DISK_init(DISK_STRUCT* DISK, char* session_filename){
 
 int _DISK_destroy(DISK_STRUCT* DISK){  
     if (DISK->mmappedFlag){
+        if (write(DISK->sessionFd, DISK->disk, DISK_SIZE) == -1) return -1;
         if (close(DISK->sessionFd) != 0) return -1;
     }
     free(DISK);
@@ -75,17 +76,18 @@ int _DISK_writeBytes(DISK_STRUCT* DISK, int block_index, char* buffer, int n_byt
 
     for (int block=0; block<n_blocks; ++block){
 
-        if (_FAT_allocateBlock(FAT, b_index)) return -1;
         if (_DISK_allocateBlock(DISK, b_index)) return -1;
 
         memcpy(DISK->disk+disk_index, buffer+(block*BLOCK_SIZE), BLOCK_SIZE);
 
         if (block < n_blocks-1){
             next_block_index = _FAT_findFirstFreeBlock(FAT);
+            if (_FAT_allocateBlock(FAT, next_block_index) != 0) return -1;
             _FAT_setNextBlock(FAT, b_index, next_block_index);
             b_index = next_block_index;
             disk_index = next_block_index*BLOCK_SIZE;
-        } 
+        }
+        
     }
 
     return n_blocks;

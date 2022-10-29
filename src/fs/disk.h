@@ -1,6 +1,7 @@
 #pragma once
 #include "../constants.h"
 
+
 /*
 DISK buffer struct.
 char* disk,

@@ -22,11 +22,12 @@ Folder Object on DISK.
 Struct size = BLOCK_SIZE
 */
 typedef struct FolderObject {
-    char isFolder;                          // Flag set to 1 if the Object is a FolderObject
-    char folderName[MAX_FILENAME_LEN];
-    int nextBlockIndex;
-    int size;
-    int contentListBlocks[(BLOCK_SIZE-44)/4];
+    char isFolder;                              // Flag set to 1 if the Object is a FolderObject
+    char folderName[MAX_FILENAME_LEN];          // Name of the folder, limited to MAX_FILENAME_LEN characters
+    int nextBlockIndex;                         // Index of the next block of the folder on disk
+    int size;                                   // Number of files contained in the folder
+    int previousFolderBlockIndex;               // Index of the block on DISK of the previous folder in the directory tree
+    int contentListBlocks[(BLOCK_SIZE-48)/4];   // Indexes of the blocks containing the first 117 contents of the folder
 } FolderObject;
 
 
@@ -50,7 +51,8 @@ typedef struct FolderHandle {
     int firstBlockIndex;                    // Index of the first block of the file (folder) on disk
     int currentBlockIndex;                  // Index of the folder block the user is currently working on (r/w)
     int size;                               // Number of files contained in the folder
-    struct FolderObject** folderList;       // ist of folders contained in the folder
+    int previousFolderBlockIndex;           // Index of the block on DISK of the previous folder in the directory tree
+    struct FolderObject** folderList;       // List of folders contained in the folder
     struct FileObject** fileList;           // List of files contained in the folder
 } FolderHandle;
 
@@ -68,16 +70,34 @@ FolderHandle* _FILE_getRoot(DISK_STRUCT* DISK, FAT_STRUCT* FAT);
 
 
 /*
-
+Deallocates a FolderHandle from memory
 */
-void*** _FILE_getContentPointers(DISK_STRUCT* DISK, int* content_blocks, int folder_size);
+void _FILE_folderHandleDestroy(FolderHandle* folder_handle);
+
+
+/*
+Deallocates a FileHandle from memory
+*/
+void _FILE_fileHandleDestroy(FileHandle* file_handle);
+
+
+/*
+Returns a list of pointers to the location of the contained folders on DISK
+*/
+FolderObject** _FILE_getContainedFolders(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderObject* folder);
+
+
+/*
+Returns a list of pointers to the location of the contained files on DISK
+*/
+FileObject** _FILE_getContainedFiles(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderObject* folder);
 
 
 /*
 Creates a FileObject on DISK.
-Returns a pointer to the created FileObject
+Returns the block index where the first block of the file is located on DISK
 */
-FileHandle* _FILE_createFile(char* file_name);
+int _FILE_createFile(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char* file_name);
 
 
 /*
@@ -99,6 +119,12 @@ Procedurally removes the folder from the FAT allocation, and all the files insid
 Returns the number of freed blocks
 */
 int _FILE_deleteFolder(int starting_block_index);
+
+
+/*
+
+*/
+int _FILE_folderAddFile(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, int folder_first_block);
 
 
 

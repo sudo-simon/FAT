@@ -2,7 +2,7 @@
 
 #include "../constants.h"
 
-//TODO: rinominare queste funzioni come i comandi stessi e scrivere le vere funzioni come fs_createFile...
+
 /*
 exits FAT, takes no arguments
 */

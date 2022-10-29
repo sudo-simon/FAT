@@ -19,10 +19,6 @@
 
 char DEBUG_FLAG = 0;
 
-// DISK_SIZE mmapped disk
-//char* DISK;
-//char MMAPPED_DISK_FLAG = 0;
-
 // DISK struct
 DISK_STRUCT* DISK;
 
@@ -39,38 +35,19 @@ FileHandle* O_FILE;
 int main(int argc, char** argv){
 
     // ------------------------------------------------------------------------------------------ //
-    // Argument passing and initializations (DISK, FAT, CWD)
+    // Argument passing and initializations (DISK, FAT, CWD, O_FILE)
 
     //TODO: possibilità di passare un parametro: nome del file su cui è stata salvata una sessione FAT
-    //TODO: oppure una stringa speciale (es. current_session) per aprire un nuovo terminale sulla
-    //TODO: sessione corrente che lavora in simultanea (threading)
 
     // Argument passing, either the name of a session file or "_fork_test_ (DEBUGGING)"
-
     char* session_filename = NULL;
-    if (argc > 1){
+    if (argc > 1)
         session_filename = argv[1];
 
-        //TODO: sostituire con i signal (SIGUSR?)
-        if (strcmp(session_filename, "_fork_test_") == 0){
-            __pid_t child_pid = fork();
-            if (child_pid){
-                system("x-terminal-emulator -e \"echo 'Process, I am your father.' && sleep 3\"");
-
-            }
-            else{
-                system("x-terminal-emulator -e \"echo 'Noooooooooooooooooo' && sleep 6\"");
-                exit(0);
-            }
-        }
-
-    }
-    
-
-    // DISK initialization with error checks
+    // DISK initialization
     DISK = calloc(1,sizeof(DISK_STRUCT));
     if (_DISK_init(DISK, session_filename)){
-        printf("[ERROR] %s is not a valid session file!",session_filename);
+        printf("[ERROR] %s is not a valid session file!\n",session_filename);
         exit(-1);
         return 0;
     }
@@ -85,7 +62,8 @@ int main(int argc, char** argv){
     else
         CWD = _FILE_getRoot(DISK, FAT);
 
-
+    // O_FILE initialization
+    O_FILE = calloc(1, sizeof(struct FileHandle));
 
 
 
@@ -142,6 +120,7 @@ int main(int argc, char** argv){
             // if cmd == quit buffers get freed
             if (strcmp(split_input[0],"quit") == 0){
                 if (n_args == 0){
+                    // Buffers deallocation
                     free(input_msg);
                     free(input);
                     free(split_input[0]);
@@ -156,11 +135,14 @@ int main(int argc, char** argv){
                         DISK->sessionFd
                     );*/
 
+                    // DISK, FAT, CWD and O_FILE deallocation
                     if (_DISK_destroy(DISK)){
                         printf("[ERROR] Unable to munmap DISK!\n");
                         continue;
                     }
                     _FAT_destroy(FAT);
+                    _FILE_folderHandleDestroy(CWD);
+                    _FILE_fileHandleDestroy(O_FILE);
                 }
                 else{
                     printf("quit doesn't take any arguments");

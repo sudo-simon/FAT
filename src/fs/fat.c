@@ -49,12 +49,12 @@ int _FAT_getNextBlock(FAT_STRUCT* FAT, int block_index){
 
 int _FAT_setNextBlock(FAT_STRUCT* FAT, int block_index, int next_index){
     FAT->next[block_index] = next_index;
-    FAT->next[next_index] = -1;
-    FAT->isFull[next_index] = 1;
     return 0;
 }
 
-
+/*
+Returns the index of the first free block on DISK
+*/
 int _FAT_findFirstFreeBlock(FAT_STRUCT* FAT){
     int index = FAT_RESERVED_BLOCKS;
     while (index<FAT_ENTRIES){
@@ -69,6 +69,7 @@ int _FAT_findFirstFreeBlock(FAT_STRUCT* FAT){
 int _FAT_allocateBlock(FAT_STRUCT* FAT, int block_index){
     if (FAT->isFull[block_index] == 0){
         FAT->isFull[block_index] = 1;
+        FAT->next[block_index] = -1;
         return 0; 
     }     
     else return -1;
