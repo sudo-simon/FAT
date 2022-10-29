@@ -8,7 +8,7 @@ char mmappedFlag,
 int sessionFd
 */
 typedef struct DISK_STRUCT {
-    char* disk;
+    char disk[DISK_SIZE];
     char mmappedFlag;
     int sessionFd;
 } DISK_STRUCT;

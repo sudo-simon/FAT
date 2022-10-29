@@ -30,7 +30,10 @@ DISK_STRUCT* DISK;
 FAT_STRUCT* FAT;
 
 // CWD (Current Working Directory)
-FileHandle* CWD;
+FolderHandle* CWD;
+
+// FileHandle of the currently opened file
+FileHandle* O_FILE;
 
 
 int main(int argc, char** argv){

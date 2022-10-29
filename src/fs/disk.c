@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -28,21 +29,15 @@ int _DISK_init(DISK_STRUCT* DISK, char* session_filename){
             O_RDWR
         );
 
-        DISK->disk = mmap(
-            NULL,
-            DISK_SIZE,
-            PROT_READ | PROT_WRITE,
-            MAP_PRIVATE | MAP_POPULATE,
-            DISK->sessionFd,
-            0
-        );
+        ssize_t n_read = read(DISK->sessionFd, DISK->disk, DISK_SIZE);
+        if (n_read == -1) return -1;
 
         DISK->mmappedFlag = 1;
     }
 
     // DISK to be created from scratch
     else{
-        DISK->disk = calloc(DISK_SIZE, sizeof(char));
+        memset(DISK->disk, 0, DISK_SIZE);
         DISK->sessionFd = -1;
         DISK->mmappedFlag = 0;
     }
@@ -51,14 +46,10 @@ int _DISK_init(DISK_STRUCT* DISK, char* session_filename){
 }
 
 
-int _DISK_destroy(DISK_STRUCT* DISK){
-    
+int _DISK_destroy(DISK_STRUCT* DISK){  
     if (DISK->mmappedFlag){
-        if(munmap(DISK->disk, DISK_SIZE))
-            return -1;
+        if (close(DISK->sessionFd) != 0) return -1;
     }
-    else free(DISK->disk);
-    
     free(DISK);
     return 0;
 }
@@ -66,10 +57,7 @@ int _DISK_destroy(DISK_STRUCT* DISK){
 
 int _DISK_allocateBlock(DISK_STRUCT* DISK, int block_index){
     int start_index = block_index*BLOCK_SIZE;
-    for (long i=0; i<BLOCK_SIZE; ++i){
-        DISK->disk[start_index+i] = 0;
-    }
-    //memcpy(DISK->disk+start_index, "", BLOCK_SIZE);
+    memset(DISK->disk+start_index, 0, BLOCK_SIZE);
     return 0;
 }
 
@@ -119,7 +107,14 @@ char* _DISK_readBytes(DISK_STRUCT* DISK, int block_index, int n_bytes){
     char* return_buffer = calloc(n_bytes,sizeof(char));
     for (int block=0; block<n_blocks; ++block){
 
-        //TODO: write this :)
+        memcpy(return_buffer+(block*BLOCK_SIZE), DISK->disk+disk_index, BLOCK_SIZE);
+
+        if (block < n_blocks-1){
+            if (_FAT_EOF(FAT, b_index)) return return_buffer;
+            next_block_index = _FAT_getNextBlock(FAT, b_index);
+            b_index = next_block_index;
+            disk_index = next_block_index*BLOCK_SIZE;
+        }
 
     }
     

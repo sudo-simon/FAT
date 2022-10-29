@@ -5,39 +5,72 @@
 
 
 /*
-File object on DISK
+File object on DISK.
+Struct size = BLOCK_SIZE
 */
 typedef struct FileObject {
-    char fileName[MAX_FILENAME_LEN];    // Name of the file, limited to MAX_FILENAME_LEN characters
-    char isFolder;                      // Flag that differentiates Folders from Files
-    struct FileObject** folderFiles;    // List of files (and folders) contained in the folder, NULL if isFolder == 0
-    int firstDiskBlockIndex;            // Index of the first block of the file on disk
-    int size;                           // Size of file in bytes or in # of files contained in the folder (if isFolder)
-    char* data;                         // Actual data of the file
+    char isFolder;                          // Flag set to 1 if the Object is a FolderObject
+    char fileName[MAX_FILENAME_LEN];        // Name of the file, limited to MAX_FILENAME_LEN characters
+    int nextBlockIndex;                     // Index of the next block of the file on disk
+    int size;                               // Size of file in bytes or in # of files contained in the folder (if isFolder)
+    char firstDataBlock[BLOCK_SIZE-44];     // First (BLOCK_SIZE-44) bytes of the file
 } FileObject;
+
+
+/*
+Folder Object on DISK.
+Struct size = BLOCK_SIZE
+*/
+typedef struct FolderObject {
+    char isFolder;                          // Flag set to 1 if the Object is a FolderObject
+    char folderName[MAX_FILENAME_LEN];
+    int nextBlockIndex;
+    int size;
+    int contentListBlocks[(BLOCK_SIZE-44)/4];
+} FolderObject;
 
 
 /*
 FileHandle struct returned to the user editing a file
 */
 typedef struct FileHandle {
-    char fileName[MAX_FILENAME_LEN];    // Name of the file, limited to MAX_FILENAME_LEN characters
-    int firstDiskBlockIndex;            // Index of the first block of the file on disk
-    int currentDiskBlockIndex;          // Index of the file block the user is currently working on (r/w)
-    int size;                           // Size of file in bytes or in # of files contained in the folder (if isFolder)
+    char fileName[MAX_FILENAME_LEN];        // Name of the file, limited to MAX_FILENAME_LEN characters
+    int firstBlockIndex;                    // Index of the first block of the file on disk
+    int currentBlockIndex;                  // Index of the file block the user is currently working on (r/w)
+    int size;                               // Size of file in bytes or in # of files contained in the folder (if isFolder)
+    char currentBlock[BLOCK_SIZE];          // Buffer containing the current opened disk block 
 } FileHandle;
+
+
+/*
+FolderHandle struct returned to the user as the CWD
+*/
+typedef struct FolderHandle {
+    char folderName[MAX_FILENAME_LEN];      // Name of the folder, limited to MAX_FILENAME_LEN characters
+    int firstBlockIndex;                    // Index of the first block of the file (folder) on disk
+    int currentBlockIndex;                  // Index of the folder block the user is currently working on (r/w)
+    int size;                               // Number of files contained in the folder
+    struct FolderObject** folderList;       // ist of folders contained in the folder
+    struct FileObject** fileList;           // List of files contained in the folder
+} FolderHandle;
 
 
 /*
 Initializes the root folder at the start of the disk
 */
-FileHandle* _FILE_initRoot(DISK_STRUCT* DISK, FAT_STRUCT* FAT);
+FolderHandle* _FILE_initRoot(DISK_STRUCT* DISK, FAT_STRUCT* FAT);
 
 
 /*
 Returns a FileHandle for the root folder of the opened DISK
 */
-FileHandle* _FILE_getRoot(DISK_STRUCT* DISK, FAT_STRUCT* FAT);
+FolderHandle* _FILE_getRoot(DISK_STRUCT* DISK, FAT_STRUCT* FAT);
+
+
+/*
+
+*/
+void*** _FILE_getContentPointers(DISK_STRUCT* DISK, int* content_blocks, int folder_size);
 
 
 /*
@@ -58,7 +91,7 @@ int _FILE_deleteFile(int starting_block_index);
 Creates a folder (special type of FileObject) on DISK.
 Returns a pointer to the created FileObject
 */
-FileHandle* _FILE_createFolder(char* folder_name);
+FolderHandle* _FILE_createFolder(char* folder_name);
 
 
 /*
