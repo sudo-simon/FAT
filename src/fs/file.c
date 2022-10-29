@@ -226,14 +226,14 @@ int _FILE_createFile(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char
 }
 
 
-int _FILE_folderAddFile(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, int folder_first_block){
+int _FILE_folderAddFile(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, int file_first_block){
 
     // I need to allocate another block for the folder
     if ((CWD->size-116)%128 == 0){
 
         int next_folder_block[128];
         memset(next_folder_block, 0, BLOCK_SIZE);
-        next_folder_block[0] = folder_first_block;
+        next_folder_block[0] = file_first_block;
 
         int next_block_index = _FAT_findFirstFreeBlock(FAT);
         if (next_block_index == -1){
@@ -260,7 +260,7 @@ int _FILE_folderAddFile(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, i
 
     CWD->size++;
     CWD->fileList = realloc(CWD->fileList, (CWD->size * sizeof(struct FolderObject*)));
-    CWD->fileList[CWD->size-1] = (FileObject*) DISK->disk + (folder_first_block*BLOCK_SIZE);
+    CWD->fileList[CWD->size-1] = (FileObject*) DISK->disk + (file_first_block*BLOCK_SIZE);
 
     return 0;
 }
