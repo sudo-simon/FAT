@@ -1,13 +1,10 @@
 // My headers
 #include "functions.h"
-#include "fat.h"
-#include "file.h"
-
-extern FAT_STRUCT* FAT;
-extern char* DISK;
 
 
-int _fs_createFile(char* file_name);
+int _FS_createFile(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char* file_name){
+    //TODO: THIS!
+}
 
 int _fs_eraseFile(char* file_name);
 

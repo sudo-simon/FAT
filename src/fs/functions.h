@@ -1,9 +1,12 @@
 #pragma once
+#include "disk.h"
+#include "fat.h"
+#include "file.h"
 
 //TODO: i parametri delle funzioni andranno probabilmente cambiati in strutture dati inizializzate
 //TODO: dai wrapper in commands.c
 
-int _fs_createFile(char* file_name);
+int _FS_createFile(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char* file_name);
 
 int _fs_eraseFile(char* file_name);
 

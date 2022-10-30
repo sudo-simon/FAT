@@ -42,7 +42,7 @@ FolderHandle* _FILE_getRoot(DISK_STRUCT* DISK, FAT_STRUCT* FAT){
     
     strncpy(root_handle->folderName, root->folderName, MAX_FILENAME_LEN);
     root_handle->firstBlockIndex = FAT_RESERVED_BLOCKS;
-    root_handle->currentBlockIndex = FAT_RESERVED_BLOCKS;
+    root_handle->currentBlockIndex = FAT_RESERVED_BLOCKS;   //TODO: bugfixing (current_index may be different)
     root_handle->size = root->size;
     root_handle->previousFolderBlockIndex = root->previousFolderBlockIndex;
     root_handle->folderList = _FILE_getContainedFolders(DISK, FAT, root);
@@ -85,7 +85,7 @@ FolderObject** _FILE_getContainedFolders(DISK_STRUCT* DISK, FAT_STRUCT* FAT, Fol
         // End of block reached, trying to read from the next one
         if ((i-116)%128 == 0){
             b_index = next_index;
-            next_index = _FAT_getNextBlock(FAT, folder->nextBlockIndex);
+            next_index = _FAT_getNextBlock(FAT, next_index);
             block_traversed_flag = 1;
             char* tmp_buf = _DISK_readBytes(DISK, b_index, BLOCK_SIZE);
             memcpy(folder_block, tmp_buf, BLOCK_SIZE);
@@ -152,7 +152,7 @@ FileObject** _FILE_getContainedFiles(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderO
         // End of block reached, trying to read from the next one
         if ((i-116)%128 == 0){
             b_index = next_index;
-            next_index = _FAT_getNextBlock(FAT, folder->nextBlockIndex);
+            next_index = _FAT_getNextBlock(FAT, next_index);
             block_traversed_flag = 1;
             char* tmp_buf = _DISK_readBytes(DISK, b_index, BLOCK_SIZE);
             memcpy(folder_block, tmp_buf, BLOCK_SIZE);
@@ -228,6 +228,8 @@ int _FILE_createFile(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char
 
 int _FILE_folderAddFile(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, int file_first_block){
 
+    int next_block_index = -1;
+
     // I need to allocate another block for the folder
     if ((CWD->size-116)%128 == 0){
 
@@ -235,7 +237,7 @@ int _FILE_folderAddFile(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, i
         memset(next_folder_block, 0, BLOCK_SIZE);
         next_folder_block[0] = file_first_block;
 
-        int next_block_index = _FAT_findFirstFreeBlock(FAT);
+        next_block_index = _FAT_findFirstFreeBlock(FAT);
         if (next_block_index == -1){
             printf("[ERROR] No space left on DISK!\n");
             return -1;
@@ -248,16 +250,26 @@ int _FILE_folderAddFile(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, i
 
     }
 
+    //TODO: Algorithm check (spooky math here)
+    FolderObject* folder_obj = (FolderObject*) _DISK_readBytes(DISK, CWD->firstBlockIndex, sizeof(struct FolderObject));
+    folder_obj->size++;
+    
+    if (CWD->size <= 116){
+        folder_obj->contentListBlocks[folder_obj->size-1] = file_first_block;
+    }
     else{
-        //TODO: THIS! Differenziare tra aggiunta al blocco base o ad un blocco successivo
-        if (CWD->size < 116){
-            // Opero sul blocco del tipo FolderObject*
+        if (folder_obj->size == 117){
+            folder_obj->nextBlockIndex = next_block_index;
         }
-        else{
-            // Opero sul blocco del tipo int Folder_block[128]
-        }
+
+        int* folder_block = (int*) _DISK_readBytes(DISK, CWD->currentBlockIndex, BLOCK_SIZE);
+        folder_block[(folder_obj->size-117)%128] = file_first_block;
+        _DISK_writeBytes(DISK, CWD->currentBlockIndex, (char*) folder_block, BLOCK_SIZE);
+        free(folder_block);
     }
 
+    _DISK_writeBytes(DISK, CWD->firstBlockIndex, (char*) folder_obj, sizeof(struct FolderObject));
+    
     CWD->size++;
     CWD->fileList = realloc(CWD->fileList, (CWD->size * sizeof(struct FolderObject*)));
     CWD->fileList[CWD->size-1] = (FileObject*) DISK->disk + (file_first_block*BLOCK_SIZE);

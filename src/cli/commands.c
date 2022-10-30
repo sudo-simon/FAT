@@ -1,13 +1,19 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 // My headers
 #include "../constants.h"
 #include "../cli/shell.h"
 #include "../fs/functions.h"
+#include "../fs/disk.h"
+#include "../fs/fat.h"
+#include "../fs/file.h"
 
-
-//TODO: extern DISK, FAT, CWD and O_FILE
+extern DISK_STRUCT* DISK;
+extern FAT_STRUCT* FAT;
+extern FolderHandle* CWD;
+extern FileHandle* O_FILE;
 
 
 int _quit(void* arg){
@@ -28,7 +34,14 @@ int _echo(void* string){
 
 
 int _mk(void *arg){
-    printf("createFile not yet implemented");
+    char* new_filename = (char*) arg;
+    if (strlen(new_filename) > MAX_FILENAME_LEN){
+        printf("File name too long! Max 32 chars\n");
+        return -1;
+    }
+
+    _FS_createFile(DISK, FAT, CWD, new_filename);
+
     return 0;
 }
 
