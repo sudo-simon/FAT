@@ -137,7 +137,7 @@ int main(int argc, char** argv){
 
                     // DISK, FAT, CWD and O_FILE deallocation
                     if (_DISK_destroy(DISK)){
-                        printf("[ERROR] Unable to munmap DISK!\n");
+                        printf("[ERROR] Unable to unmap DISK!");
                         continue;
                     }
                     _FAT_destroy(FAT);

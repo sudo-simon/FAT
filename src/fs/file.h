@@ -26,8 +26,10 @@ typedef struct FolderObject {
     char folderName[MAX_FILENAME_LEN];          // Name of the folder, limited to MAX_FILENAME_LEN characters
     int nextBlockIndex;                         // Index of the next block of the folder on disk
     int size;                                   // Number of files contained in the folder
+    int numFolders;
+    int numFiles;
     int previousFolderBlockIndex;               // Index of the block on DISK of the previous folder in the directory tree
-    int contentListBlocks[(BLOCK_SIZE-48)/4];   // Indexes of the blocks containing the first 117 contents of the folder
+    int contentListBlocks[(BLOCK_SIZE-56)/4];   // Indexes of the blocks containing the first 117 contents of the folder
 } FolderObject;
 
 
@@ -52,9 +54,22 @@ typedef struct FolderHandle {
     int currentBlockIndex;                  // Index of the folder block the user is currently working on (r/w)
     int size;                               // Number of files contained in the folder
     int previousFolderBlockIndex;           // Index of the block on DISK of the previous folder in the directory tree
-    struct FolderObject** folderList;       // List of folders contained in the folder
-    struct FileObject** fileList;           // List of files contained in the folder
+    int numFolders;                         // Number of folders contained in the folder
+    struct FolderListElem** folderList;      
+    int numFiles;                           // Number of files contained in the folder
+    struct FolderListElem** fileList;  
 } FolderHandle;
+
+
+
+/*
+FolderListElem struct to be contained in the FolderHandle struct
+*/
+typedef struct FolderListElem {
+    char name[MAX_FILENAME_LEN];
+    int firstBlockIndex;
+    int size;
+} FolderListElem;
 
 
 /*
@@ -82,15 +97,33 @@ void _FILE_fileHandleDestroy(FileHandle* file_handle);
 
 
 /*
-Returns a list of pointers to the location of the contained folders on DISK
+Puts a list of pointers to FolderObject in folder_list.
+Returns the number of folder pointers now present in folder_list.
+THE FUNCTION ALLOCATES THE FOLDER_LIST POINTER
 */
-FolderObject** _FILE_getContainedFolders(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderObject* folder);
+int _FILE_getContainedFolders(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderObject* folder, FolderListElem** folder_block_list);
 
 
 /*
-Returns a list of pointers to the location of the contained files on DISK
+Puts a list of pointers to FileObject in file_list.
+Returns the number of files pointers now present in file_list.
+THE FUNCTION ALLOCATES THE FILE_LIST POINTER
 */
-FileObject** _FILE_getContainedFiles(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderObject* folder);
+int _FILE_getContainedFiles(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderObject* folder, FolderListElem** file_block_list);
+
+
+/*
+Checks if a file with the same name exists in the CWD.
+Returns 0 if false, 1 if true
+*/
+char _FILE_existingFileName(FolderHandle* CWD, char* file_name);
+
+
+/*
+Checks if a folder with the same name exists in the CWD.
+Returns 0 if false, 1 if true
+*/
+char _FILE_existingFolderName(FolderHandle* CWD, char* folder_name);
 
 
 /*
@@ -122,9 +155,9 @@ int _FILE_deleteFolder(int starting_block_index);
 
 
 /*
-
+Adds a file to the directory tree, both in CWD and on DISK
 */
-int _FILE_folderAddFile(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, int file_first_block);
+int _FILE_folderAddFile(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, FileObject* new_file, int file_first_block);
 
 
 /*
@@ -136,7 +169,7 @@ int _FILE_folderRemoveFile(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD
 /*
 
 */
-int _FILE_folderAddFolder(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, int folder_first_block);
+int _FILE_folderAddFolder(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, FolderObject* new_folder, int folder_first_block);
 
 
 /*

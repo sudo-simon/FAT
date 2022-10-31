@@ -15,6 +15,7 @@ extern FAT_STRUCT* FAT;
 extern FolderHandle* CWD;
 extern FileHandle* O_FILE;
 
+//TODO: input string sanification!!
 
 int _quit(void* arg){
     printf("Exiting FAT...\n");
@@ -35,12 +36,19 @@ int _echo(void* string){
 
 int _mk(void *arg){
     char* new_filename = (char*) arg;
-    if (strlen(new_filename) > MAX_FILENAME_LEN){
-        printf("File name too long! Max 32 chars\n");
+    if (strlen(new_filename) == 0){
+        printf("File name can't be empty");
+        return -1;
+    }
+    else if (strlen(new_filename) > MAX_FILENAME_LEN){
+        printf("File name too long! It can be a maximum of 32 characters long");
         return -1;
     }
 
-    _FS_createFile(DISK, FAT, CWD, new_filename);
+    if(_FS_createFile(DISK, FAT, CWD, new_filename) == -1){
+        printf("[ERROR] Unable to create the file %s",new_filename);
+        return -1;
+    }
 
     return 0;
 }
@@ -95,7 +103,12 @@ int _cd(void *arg){
 
 
 int _ls(void *arg){
-    printf("listDir not yet implemented");
+    if (strlen((char*)arg) > 0){
+        printf("ls doesn't take any arguments");
+        return -1;
+    }
+
+    _FS_listDir(DISK, FAT, CWD);
     return 0;
 }
 
