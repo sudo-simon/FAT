@@ -203,15 +203,21 @@ int _FILE_folderRemoveFolder(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* C
 
 
 /*
-
+Sets the CWD to new_WD_name if it is a valid working directory
 */
 int _FILE_changeWorkingDirectory(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char* new_WD_name);
 
 
 /*
-Reads the content of a file and returns a pointer to a buffer of its content
+Reads the content of a file and puts it in the dest_buffer parameter
 */
-char* _FILE_getFileContent(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char* file_name);
+int _FILE_getFileContent(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char* file_name, char* dest_buffer);
+
+
+/*
+Writes n_bytes of the content of src_buffer to the file specified with file_name
+*/
+int _FILE_writeFileContent(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char* file_name, char* src_buffer, int n_bytes);
 
 
 

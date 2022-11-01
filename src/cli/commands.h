@@ -34,16 +34,6 @@ prints the content of the file passed as and argument to stdout
 int _cat(void* arg);
 
 /*
-saves the file to "disk", fs function, remove from here
-*/
-int writeFile(void* arg);
-
-/*
-reads the file from "disk", fs function, remove from here
-*/
-int readFile(void* arg);
-
-/*
 searches for the file with the name passed as an argument
 */
 int _find(void* arg);
@@ -78,6 +68,12 @@ saves the current session as a .fat file on disk
 */
 int _save(void* arg);
 
+/*
+TEMPORARY FUNCTION: allows to write the file from stdin.
+To be removed when Kilo implementation is complete
+*/
+int _write(void* arg);
+
 
 
 
@@ -102,7 +98,8 @@ const static char* CMD_ARRAY[TOTAL_COMMANDS] = {
     "cd",       // 9
     "ls",       // 10
     "edit",     // 11
-    "save"      // 12
+    "save",     // 12
+    "write"     // 13
 };
 
 /*
@@ -121,5 +118,6 @@ const static FN_PTR FN_ARRAY[TOTAL_COMMANDS] = {
     _cd,        // 9
     _ls,        // 10
     _edit,      // 11
-    _save       // 12
+    _save,      // 12
+    _write      // 13
 };

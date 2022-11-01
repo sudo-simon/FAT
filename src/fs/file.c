@@ -832,10 +832,14 @@ int _FILE_changeWorkingDirectory(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandl
 
     int b_index;
 
-    if (strncmp(new_WD_name, "..", MAX_FILENAME_LEN) == 0)
+    if (strncmp(new_WD_name, "..", MAX_FILENAME_LEN) == 0){
+        if (CWD->previousFolderBlockIndex == -1){
+            printf("%s folder has no parent folder\n",CWD->folderName);
+            return -1;
+        }
         b_index = CWD->previousFolderBlockIndex;
-    else
-        b_index = CWD->folderList[_FILE_searchFolderInCWD(CWD, new_WD_name)]->firstBlockIndex;
+    }
+    else b_index = CWD->folderList[_FILE_searchFolderInCWD(CWD, new_WD_name)]->firstBlockIndex;
     
 
     int next_index = _FAT_getNextBlock(FAT, b_index);
@@ -892,13 +896,14 @@ int _FILE_changeWorkingDirectory(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandl
 
 
 
-char* _FILE_getFileContent(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char* file_name){
+int _FILE_getFileContent(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char* file_name, char* dest_buffer){
     int cwd_index = _FILE_searchFileInCWD(CWD, file_name);
-    if (CWD->fileList[cwd_index]->size == 0) return NULL;
-    char* output_buf = calloc(CWD->fileList[cwd_index]->size,sizeof(char));
+    if (CWD->fileList[cwd_index]->size == 0) return -1;
 
     int b_index = CWD->fileList[cwd_index]->firstBlockIndex;
     int next_index = _FAT_getNextBlock(FAT, b_index);
+
+    int n_bytes = CWD->fileList[cwd_index]->size;
     int read_bytes = 0;
     
     while(b_index != -1){
@@ -906,22 +911,110 @@ char* _FILE_getFileContent(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD
         // I am reading the first file block
         if (read_bytes == 0){
             FileObject* file = (FileObject*) _DISK_readBytes(DISK, b_index, sizeof(struct FileObject));
-            memcpy(output_buf, file->firstDataBlock, FIRST_DATA_BLOCK_SIZE);
-            read_bytes = strlen(output_buf);
+            strncpy(dest_buffer, file->firstDataBlock, ( n_bytes < FIRST_DATA_BLOCK_SIZE ? n_bytes : FIRST_DATA_BLOCK_SIZE ));
+            read_bytes = strlen(dest_buffer);
             free(file);
         }
 
         // I am reading the next file block(s)
         else{
             char* data_block = _DISK_readBytes(DISK, b_index, BLOCK_SIZE);
-            memcpy(output_buf+read_bytes, data_block, BLOCK_SIZE);
-            read_bytes = strlen(output_buf);
+            strncpy(dest_buffer+read_bytes, data_block, ( n_bytes-read_bytes < BLOCK_SIZE ? n_bytes-read_bytes : BLOCK_SIZE ));
+            read_bytes = strlen(dest_buffer);
             free(data_block);
         }
 
         b_index = next_index;
-        next_index = _FAT_getNextBlock(FAT, next_index);
+        next_index = _FAT_getNextBlock(FAT, b_index);
     }
 
-    return output_buf;
+    return 0;
+}
+
+
+
+
+
+
+int _FILE_writeFileContent(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char* file_name, char* src_buffer, int n_bytes){
+
+    int extra_blocks_to_write;
+    if (n_bytes <= FIRST_DATA_BLOCK_SIZE) extra_blocks_to_write = 0;
+    else extra_blocks_to_write = ((n_bytes-FIRST_DATA_BLOCK_SIZE-1) / BLOCK_SIZE) +1;
+
+    int cwd_index = _FILE_searchFileInCWD(CWD, file_name);
+    FileObject* file = (FileObject*) _DISK_readBytes(
+        DISK, 
+        CWD->fileList[cwd_index]->firstBlockIndex, 
+        sizeof(struct FileObject)
+    );
+
+    int b_index = CWD->fileList[cwd_index]->firstBlockIndex;
+    int next_index = _FAT_getNextBlock(FAT, b_index);
+
+    strncpy(file->firstDataBlock, src_buffer, FIRST_DATA_BLOCK_SIZE);
+    for (int i=0; i<extra_blocks_to_write; ++i){
+
+        char* file_block;
+        
+        // I have to allocate a new block for the file
+        if (next_index == -1){
+            
+            int new_block_index = _FAT_findFirstFreeBlock(FAT);
+            if (new_block_index == -1){
+                printf("[ERROR] No space left on DISK!\n");
+                return -1;
+            }
+
+            if (_FAT_allocateBlock(FAT, new_block_index) != 0) return -1;
+            _FAT_setNextBlock(FAT, b_index, new_block_index);
+
+            if (_DISK_writeBytes(
+                    DISK, 
+                    new_block_index, 
+                    src_buffer+(FIRST_DATA_BLOCK_SIZE + i*BLOCK_SIZE), 
+                    BLOCK_SIZE
+                ) == -1) return -1;
+
+            next_index = new_block_index;
+            if (i == 0) file->nextBlockIndex = new_block_index;
+
+        }
+
+        // There is already an allocated block for the file
+        else{
+            if (_DISK_writeBytes(
+                    DISK, 
+                    b_index, 
+                    src_buffer+(FIRST_DATA_BLOCK_SIZE + i*BLOCK_SIZE),
+                    BLOCK_SIZE
+                ) == -1) return -1;
+        }
+
+        b_index = next_index;
+        next_index = _FAT_getNextBlock(FAT, b_index);
+
+    }
+
+    // I have to deallocate any remaining emptied file blocks
+    while (next_index != -1){
+        b_index = next_index;
+        next_index = _FAT_getNextBlock(FAT, b_index);
+        _FAT_deallocateBlock(FAT, b_index);
+    }
+    if (extra_blocks_to_write == 0) file->nextBlockIndex = -1;
+
+
+    file->size = n_bytes;
+    CWD->fileList[cwd_index]->size = n_bytes;
+    _DISK_writeBytes(
+        DISK, 
+        CWD->fileList[cwd_index]->firstBlockIndex, 
+        (char*) file, 
+        sizeof(struct FileObject)
+    );
+
+    free(file);
+    return 0;
+
 }

@@ -9,6 +9,7 @@
 // My headers
 #include "../constants.h"
 #include "../cli/shell.h"
+#include "../fs/aux.h"
 #include "../fs/functions.h"
 #include "../fs/disk.h"
 #include "../fs/fat.h"
@@ -85,36 +86,53 @@ int _cat(void* arg){
         return -1;
     }
     else if (strlen(file_name) > MAX_FILENAME_LEN){
-        printf("File name too long! It can be a maximum of 32 characters long\n");
+        printf("File name too long! It can be a maximum of %d characters long\n",MAX_FILENAME_LEN);
         return -1;
     }
 
-    char* output;
+    if (! _FILE_existingFileName(CWD, file_name)){
+        printf("There is no file named %s in this folder\n",file_name);
+        return -1;
+    }
+
+    char output[CWD->fileList[_FILE_searchFileInCWD(CWD, file_name)]->size];
     if (_FS_read(DISK, FAT, CWD, file_name, output) == -1){
         printf("[ERROR] Unable to read the file %s\n",file_name);
         return -1;
     }
     printf("\n%s\n",output);
     
-    free(output);
-    return 0;
-}
-
-
-int writeFile(void *arg){
-    printf("writeFile not yet implemented");
-    return 0;
-}
-
-
-int readFile(void *arg){
-    printf("readFile not yet implemented");
     return 0;
 }
 
 
 int _find(void *arg){
-    printf("seek not yet implemented");
+
+    char* name = (char*) arg;
+    if (strlen(name) == 0){
+        printf("Name of the file to search is needed\n");
+        return -1;
+    }
+    else if (strlen(name) > MAX_FILENAME_LEN){
+        printf("File name too long! It can be a maximum of %d characters long\n",MAX_FILENAME_LEN);
+        return -1;
+    }
+
+    char* found_paths[1024];
+    int found = _FS_seek(DISK, FAT, CWD, name, found_paths);
+    if (found == 0){
+        printf("%s not found\n",name);
+    }
+    else if (found > 0){
+        printf("%s found!\n",name);
+        for (int i=0; i<found; ++i)
+            printf("Path: %s\n",found_paths[i]);
+    }
+    else{
+        printf("[ERROR] Search of %s is not possible\n",name);
+        return -1;
+    }
+
     return 0;
 }
 
@@ -191,7 +209,8 @@ int _ls(void *arg){
 
 
 int _edit(void *arg){
-    printf("editFile not yet implemented");
+    //TODO: implementare Kilo
+    printf("_edit not implemented yet\n");
     return 0;
 }
 
@@ -225,10 +244,16 @@ int _save(void* arg){
             return -1;
         }
 
-        //TODO: input validation!!
+        // Input validation for a file name
+        if (! _AUX_validateInput(session_name)){
+            printf("[ERROR] Forbidden characters in input\n");
+            return -1;
+        }
 
+        // Adding the .FAT extension
         strncat(session_name, ".FAT", 4);
 
+        // Checking if file already exists
         if(access(session_name, F_OK) == 0){
             printf("[ERROR] The file %s already exists\n",session_name);
             return -1;
@@ -245,6 +270,50 @@ int _save(void* arg){
         strncpy(DISK->sessionFileName, session_name, 64);
         DISK->mmappedFlag = 1;
         fclose(f);
+    }
+    
+    return 0;
+}
+
+
+//TEMPORARY FUNCTION
+int _write(void* arg){
+    char* file_name = (char*) arg;
+    if (strlen(file_name) == 0){
+        printf("Name of the file to edit is needed\n");
+        return -1;
+    }
+    else if (strlen(file_name) > MAX_FILENAME_LEN){
+        printf("File name too long! It can be a maximum of %d characters long\n",MAX_FILENAME_LEN);
+        return -1;
+    }
+
+    if (! _FILE_existingFileName(CWD, file_name)){
+        printf("There is no file named %s in this folder\n",file_name);
+        return -1;
+    }
+
+
+
+    char buf[524288]; //512 KBit buffer
+    char* s = buf;
+    int c;
+
+    printf("Write the new content of the file (press Enter twice to stop writing):\n\n");
+    while( (c = fgetc(stdin)) != EOF && s < buf + sizeof(buf) - 1 ){
+        if( c == '\n' && s > buf && s[-1] == '\n' ){
+            ungetc(c, stdin);
+            break;
+        }
+        *s++ = c;
+    }
+    *s = '\0';
+
+
+
+    if (_FS_write(DISK, FAT, CWD, file_name, buf) == -1){
+        printf("[ERROR] Unable to write the file %s\n",file_name);
+        return -1;
     }
     
     return 0;

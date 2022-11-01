@@ -13,4 +13,4 @@ int _AUX_fileBinarySearch(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD,
 
 int _AUX_folderBinarySearch(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char* folder_name);
 
-int _AUX_validateInput(char* input_str);    //TODO: IMPLEMENT!
+int _AUX_validateInput(char* input_str);

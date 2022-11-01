@@ -25,16 +25,20 @@ int _FS_eraseFile(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char* f
 }
 
 
-int _FS_write();
+int _FS_write(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char* file_name, char* src_buffer){
+    return _FILE_writeFileContent(
+        DISK, 
+        FAT, 
+        CWD, 
+        file_name, 
+        src_buffer,
+        strlen(src_buffer)
+    );
+}
 
 
 int _FS_read(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char* file_name, char* dest_buffer){
-    if (! _FILE_existingFileName(CWD, file_name)){
-        printf("There is no file named %s in this folder\n",file_name);
-        return -1;
-    }
-    dest_buffer = _FILE_getFileContent(DISK, FAT, CWD, file_name);
-    if (dest_buffer == NULL){
+    if (_FILE_getFileContent(DISK, FAT, CWD, file_name, dest_buffer) == -1){
         printf("%s is empty\n",file_name);
         return -1;
     }
@@ -42,7 +46,9 @@ int _FS_read(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char* file_n
 }
 
 
-int _FS_seek(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char* file_name, char* found_path);
+int _FS_seek(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char* file_name, char* found_paths[]){
+    //TODO: SEEK!!!
+}
 
 
 int _FS_createDir(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char* dir_name){

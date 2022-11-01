@@ -169,3 +169,13 @@ int _AUX_intBinarySearch(int* list, int list_len, int to_find){
 int _AUX_fileBinarySearch(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char* file_name);
 
 int _AUX_folderBinarySearch(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char* folder_name);
+
+int _AUX_validateInput(char* input_str){
+    char no[] = "\\.,/";
+    for (int i=0; i<strlen(input_str); ++i){
+        for (int j=0; j<strlen(no); ++j){
+            if (input_str[i] == no[j]) return 0;
+        }
+    }
+    return 1;
+}
