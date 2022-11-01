@@ -160,7 +160,21 @@ int _rmdir(void *arg){
 
 
 int _cd(void *arg){
-    printf("changeDir not yet implemented");
+    char* folder_name = (char*) arg;
+    if (strlen(folder_name) == 0){
+        printf("Name of the folder to open is needed\n");
+        return -1;
+    }
+    else if (strlen(folder_name) > MAX_FILENAME_LEN){
+        printf("Folder name too long! It can be a maximum of %d characters long\n",MAX_FILENAME_LEN);
+        return -1;
+    }
+
+    if (_FS_changeDir(DISK, FAT, CWD, folder_name) == -1){
+        printf("[ERROR] Unable to open the folder %s\n",folder_name);
+        return -1;
+    }
+
     return 0;
 }
 

@@ -86,13 +86,14 @@ int main(int argc, char** argv){
     shell_init();
 
 
-    //DEBUG CODE
+    /*/DEBUG CODE
     printf("diskmmappedFlag = %d\n",DISK->mmappedFlag);
     printf("sessionFileName = %s\n",DISK->sessionFileName);
     printf("CWD->numFiles = %d\n",CWD->numFiles);
     printf("CWD->firstBlockIndex = %d\n",CWD->firstBlockIndex);
     printf("CWD->size = %d\n",CWD->size);
     printf("CWD->fileList[0]->name = %s\n",CWD->fileList[0]->name);
+    */
 
     
     // Main loop

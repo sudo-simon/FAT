@@ -63,7 +63,13 @@ int _FS_eraseDir(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char* di
 }
 
 
-int _FS_changeDir(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char* dir_name);
+int _FS_changeDir(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char* dir_name){
+    if ((! _FILE_existingFolderName(CWD, dir_name)) && (strncmp(dir_name, "..", MAX_FILENAME_LEN) != 0)){
+        printf("There is no folder named %s in this folder\n",dir_name);
+        return -1;
+    }
+    return _FILE_changeWorkingDirectory(DISK, FAT, CWD, dir_name);
+}
 
 
 int _FS_listDir(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD){

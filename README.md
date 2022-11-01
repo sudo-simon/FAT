@@ -40,7 +40,7 @@ It serves as a CLI for a simulated underlying FAT filesystem that operates on a 
 - [ ] **find \<name\>**: searches for a file with a matching name as the passed argument
 - [x] **mkdir \<name\>**: creates a directory passed as argument
 - [x] **rmdir \<dir\>**: deletes the directory passed as argument
-- [ ] **cd \<dir\>**: changes the current working directory
+- [x] **cd \<dir\>**: changes the current working directory
 - [x] **ls**: lists the content of the current working directory
 - [ ] **edit \<file\>**: allows to edit the file passed as argument
 - [x] **save**: saves the current FAT session to a file

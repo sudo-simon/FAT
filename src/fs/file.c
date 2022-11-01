@@ -828,6 +828,64 @@ int _FILE_folderRemoveFolder(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* C
 
 
 
+int _FILE_changeWorkingDirectory(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char* new_WD_name){
+
+    int b_index;
+
+    if (strncmp(new_WD_name, "..", MAX_FILENAME_LEN) == 0)
+        b_index = CWD->previousFolderBlockIndex;
+    else
+        b_index = CWD->folderList[_FILE_searchFolderInCWD(CWD, new_WD_name)]->firstBlockIndex;
+    
+
+    int next_index = _FAT_getNextBlock(FAT, b_index);
+
+    int n_folders = CWD->numFolders;
+    int n_files = CWD->numFiles;
+
+    FolderObject* new_CWD = (FolderObject*) _DISK_readBytes(
+        DISK, 
+        b_index, 
+        sizeof(struct FolderObject)
+    );
+
+    // You can never be too much careful
+    //new_CWD->previousFolderBlockIndex = CWD->firstBlockIndex;
+
+    // Sostituisco i campip di CWD
+    strncpy(CWD->folderName, new_CWD->folderName, MAX_FILENAME_LEN);
+    CWD->firstBlockIndex = b_index;
+
+    while (b_index != -1){
+        CWD->currentBlockIndex = b_index;
+        b_index = next_index;
+        next_index = _FAT_getNextBlock(FAT, next_index);
+    }
+
+    CWD->size = new_CWD->size;
+    CWD->previousFolderBlockIndex = new_CWD->previousFolderBlockIndex;
+
+    for (int i=0; i<n_folders; ++i){
+        free(CWD->folderList[i]);
+    }
+    for (int i=0; i<n_files; ++i){
+        free(CWD->fileList[i]);
+    }
+    free(CWD->folderList);
+    free(CWD->fileList);
+
+    CWD->numFolders = new_CWD->numFolders;
+    CWD->folderList = _FILE_getContainedFolders(DISK, FAT, new_CWD);
+    CWD->numFiles = new_CWD->numFiles;
+    CWD->fileList = _FILE_getContainedFiles(DISK, FAT, new_CWD);
+
+    free(new_CWD);
+    return 0;
+
+}
+
+
+
 
 
 
