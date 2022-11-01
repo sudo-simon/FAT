@@ -41,7 +41,7 @@ sudo apt install libreadline-dev
 
 Then just go in the src/ folder and run the `make` command to compile.
 
-The program can be executed both from src/fat.bin binary or from the [./FAT](./FAT) script (reccommended).
+The program can be executed both from src/fat.bin binary or from the [./FAT](./FAT) script (recommended).
 
 
 ## Commands
