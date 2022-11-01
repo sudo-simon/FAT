@@ -59,7 +59,7 @@ int _FS_eraseDir(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char* di
         printf("There is no folder named %s in this folder\n",dir_name);
         return -1;
     }
-    return _FILE_deleteFolder(DISK, FAT, CWD, dir_name);
+    return _FILE_deleteFolder(DISK, FAT, CWD, dir_name, 0);
 }
 
 

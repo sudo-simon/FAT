@@ -651,7 +651,7 @@ int _FILE_folderAddFolder(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD,
 
 
 
-int _FILE_deleteFolder(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char* folder_name){
+int _FILE_deleteFolder(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char* folder_name, char recursive_flag){
 
     int cwd_index = _FILE_searchFolderInCWD(CWD, folder_name);
     if (cwd_index == -1){
@@ -668,8 +668,30 @@ int _FILE_deleteFolder(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, ch
     int b_index = CWD->folderList[cwd_index]->firstBlockIndex;
     int next_index = folder_object->nextBlockIndex;
     
-    // Recursively deallocates subfolders
-    //TODO: recursive_folder_dealloc
+    // Recursively deallocates subfolders and files if present
+    if (folder_object->size > 0){
+
+        if (! recursive_flag){
+            char ans;
+            printf("The folder contains other files and folders.\nDo you want to recursively remove them all? [y/n]: ");
+            scanf("%c",&ans);
+            if (ans == 'n' || ans == 'N'){
+                free(folder_object);
+                return 0;
+            }
+            else if (ans == 'y' || ans == 'Y'){
+                _FILE_recursiveFolderDelete(DISK, FAT, CWD, folder_object);
+            }
+            else{
+                printf("%c is not a valid answer\n",ans);
+                free(folder_object);
+                return 0;
+            }
+        }
+
+        else _FILE_recursiveFolderDelete(DISK, FAT, CWD, folder_object);
+
+    }
 
     // Procedurally deallocate FAT entries
     while (b_index != -1){
@@ -695,6 +717,42 @@ int _FILE_deleteFolder(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, ch
 
     free(folder_object);
     return 0;
+
+}
+
+
+void _FILE_recursiveFolderDelete(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* current_dir, FolderObject* folder_object){
+
+    FolderHandle* folder = calloc(1,sizeof(struct FolderHandle));
+    strncpy(folder->folderName, folder_object->folderName, MAX_FILENAME_LEN);
+    folder->firstBlockIndex = current_dir->folderList[_FILE_searchFolderInCWD(current_dir, folder_object->folderName)]->firstBlockIndex;
+    //folder->currentBlockIndex = ????
+    folder->size = folder_object->size;
+    folder->previousFolderBlockIndex = folder_object->previousFolderBlockIndex;
+    folder->numFolders = folder_object->numFolders;
+    folder->folderList = _FILE_getContainedFolders(DISK, FAT, folder_object);
+    folder->numFiles = folder_object->numFiles;
+    folder->fileList = _FILE_getContainedFiles(DISK, FAT, folder_object);
+
+    // AUX variables used for looping
+    int n_folders = folder->numFolders;
+    int n_files = folder->numFiles;
+
+    // File deletion
+    for (int i=0; i<n_files; ++i){
+        _FILE_deleteFile(DISK, FAT, folder, folder->fileList[i]->name);
+    }
+
+    // Folder deletion
+    for (int i=0; i<n_folders; ++i){
+        _FILE_deleteFolder(DISK, FAT, folder, folder->folderList[i]->name, 1);
+    }
+
+
+    free(folder->folderList);
+    free(folder->fileList);
+    free(folder);
+    return;
 
 }
 

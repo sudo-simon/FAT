@@ -169,7 +169,13 @@ int _FILE_createFolder(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, ch
 Procedurally removes the folder from the FAT allocation, and all the files inside of it.
 Returns 0 if successful, -1 otherwise
 */
-int _FILE_deleteFolder(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char* folder_name);
+int _FILE_deleteFolder(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char* folder_name, char recursive_flag);
+
+
+/*
+Recursive call to remove all files and folders contained in a folder
+*/
+void _FILE_recursiveFolderDelete(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* current_dir, FolderObject* folder_object);
 
 
 /*
