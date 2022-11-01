@@ -2,7 +2,7 @@
 
 #include "../constants.h"
 
-//TODO: rinominare queste funzioni come i comandi stessi e scrivere le vere funzioni come fs_createFile...
+
 /*
 exits FAT, takes no arguments
 */
@@ -34,16 +34,6 @@ prints the content of the file passed as and argument to stdout
 int _cat(void* arg);
 
 /*
-saves the file to "disk", fs function, remove from here
-*/
-int writeFile(void* arg);
-
-/*
-reads the file from "disk", fs function, remove from here
-*/
-int readFile(void* arg);
-
-/*
 searches for the file with the name passed as an argument
 */
 int _find(void* arg);
@@ -73,6 +63,17 @@ allows to edit the file passed as an argument
 */
 int _edit(void* arg);
 
+/*
+saves the current session as a .fat file on disk
+*/
+int _save(void* arg);
+
+/*
+TEMPORARY FUNCTION: allows to write the file from stdin.
+To be removed when Kilo implementation is complete
+*/
+int _write(void* arg);
+
 
 
 
@@ -96,8 +97,9 @@ const static char* CMD_ARRAY[TOTAL_COMMANDS] = {
     "rmdir",    // 8
     "cd",       // 9
     "ls",       // 10
-    "edit"      // 11
-    //TODO: comando FAT <--new / file> per apertura di fork()?
+    "edit",     // 11
+    "save",     // 12
+    "write"     // 13
 };
 
 /*
@@ -115,5 +117,7 @@ const static FN_PTR FN_ARRAY[TOTAL_COMMANDS] = {
     _rmdir,     // 8
     _cd,        // 9
     _ls,        // 10
-    _edit       // 11
+    _edit,      // 11
+    _save,      // 12
+    _write      // 13
 };
