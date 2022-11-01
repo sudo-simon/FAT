@@ -35,11 +35,12 @@ It serves as a CLI for a simulated underlying FAT filesystem that operates on a 
 - [x] **quit**: exits FAT
 - [x] **echo \<string\>**: writes the argument to stdout
 - [x] **mk \<name\>**: creates the file passed as argument
-- [ ] **rm \<file\>**: deletes the file passed as argument
-- [ ] **cat \<file\>**: prints the content of the file passed as argument on the terminal
+- [x] **rm \<file\>**: deletes the file passed as argument
+- [x] **cat \<file\>**: prints the content of the file passed as argument to stdout
 - [ ] **find \<name\>**: searches for a file with a matching name as the passed argument
-- [ ] **mkdir \<name\>**: creates a directory passed as argument
-- [ ] **rmdir \<dir\>**: deletes the directory passed as argument
+- [x] **mkdir \<name\>**: creates a directory passed as argument
+- [x] **rmdir \<dir\>**: deletes the directory passed as argument
 - [ ] **cd \<dir\>**: changes the current working directory
-- [x] **ls \<dir?\>**: lists the content of the current directory or the one passed as argument (if present) 
+- [x] **ls**: lists the content of the current working directory
 - [ ] **edit \<file\>**: allows to edit the file passed as argument
+- [x] **save**: saves the current FAT session to a file

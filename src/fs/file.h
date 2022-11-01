@@ -3,6 +3,8 @@
 #include "disk.h"
 #include "fat.h"
 
+#define FIRST_DATA_BLOCK_SIZE 468
+#define CONTENT_LIST_BLOCKS_SIZE 114
 
 /*
 File object on DISK.
@@ -31,6 +33,8 @@ typedef struct FolderObject {
     int previousFolderBlockIndex;               // Index of the block on DISK of the previous folder in the directory tree
     int contentListBlocks[(BLOCK_SIZE-56)/4];   // Indexes of the blocks containing the first 117 contents of the folder
 } FolderObject;
+// The integer comparator of the block indexes in contentListBlocks
+//int _FILE_contentListBlocks_comparator(const void* n1, const void* n2);
 
 
 /*
@@ -70,6 +74,8 @@ typedef struct FolderListElem {
     int firstBlockIndex;
     int size;
 } FolderListElem;
+// The Alphabetical comparator of the FolderListElem struct
+//int _FILE_FolderListElem_comparator(const void* n1, const void* n2);
 
 
 /*
@@ -97,19 +103,31 @@ void _FILE_fileHandleDestroy(FileHandle* file_handle);
 
 
 /*
-Puts a list of pointers to FolderObject in folder_list.
+Puts a list of pointers to FolderListElem in folder_list.
 Returns the number of folder pointers now present in folder_list.
 THE FUNCTION ALLOCATES THE FOLDER_LIST POINTER
 */
-int _FILE_getContainedFolders(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderObject* folder, FolderListElem** folder_block_list);
+FolderListElem** _FILE_getContainedFolders(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderObject* folder);
 
 
 /*
-Puts a list of pointers to FileObject in file_list.
+Puts a list of pointers to FolderListElem in file_list.
 Returns the number of files pointers now present in file_list.
 THE FUNCTION ALLOCATES THE FILE_LIST POINTER
 */
-int _FILE_getContainedFiles(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderObject* folder, FolderListElem** file_block_list);
+FolderListElem** _FILE_getContainedFiles(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderObject* folder);
+
+
+/*
+Binary search of folder named folder_name in the CWD.
+Returns the index of the folder if it is found, -1 otherwise
+*/
+int _FILE_searchFolderInCWD(FolderHandle* CWD, char* folder_name);
+/*
+Binary search of file named file_name in the CWD.
+Returns the index of the file if it is found, -1 otherwise
+*/
+int _FILE_searchFileInCWD(FolderHandle* CWD, char* file_name);
 
 
 /*
@@ -135,23 +153,23 @@ int _FILE_createFile(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char
 
 /*
 Procedurally removes the file from the FAT allocation.
-Returns number of freed blocks
+Returns 0 if successful, -1 otherwise
 */
-int _FILE_deleteFile(int starting_block_index);
+int _FILE_deleteFile(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char* file_name);
 
 
 /*
-Creates a folder (special type of FileObject) on DISK.
-Returns a pointer to the created FileObject
+Creates a FolderObject on DISK.
+Returns the block index where the first block of the folder is located on DISK
 */
-FolderHandle* _FILE_createFolder(char* folder_name);
+int _FILE_createFolder(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char* folder_name);
 
 
 /*
 Procedurally removes the folder from the FAT allocation, and all the files inside of it.
-Returns the number of freed blocks
+Returns 0 if successful, -1 otherwise
 */
-int _FILE_deleteFolder(int starting_block_index);
+int _FILE_deleteFolder(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char* folder_name);
 
 
 /*
@@ -161,19 +179,19 @@ int _FILE_folderAddFile(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, F
 
 
 /*
-
+Removes a file from the directory tree, both in CWD and on DISK
 */
 int _FILE_folderRemoveFile(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, int file_first_block);
 
 
 /*
-
+Adds a folder to the directory tree, both in CWD and on DISK
 */
 int _FILE_folderAddFolder(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, FolderObject* new_folder, int folder_first_block);
 
 
 /*
-
+Removes a folder from the directory tree, both in CWD and on DISK
 */
 int _FILE_folderRemoveFolder(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, int folder_first_block);
 
@@ -182,6 +200,12 @@ int _FILE_folderRemoveFolder(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* C
 
 */
 FolderHandle* _FILE_changeWorkingDirectory(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char* new_WD_name);
+
+
+/*
+Reads the content of a file and returns a pointer to a buffer of its content
+*/
+char* _FILE_getFileContent(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char* file_name);
 
 
 

@@ -23,14 +23,13 @@ int _DISK_init(DISK_STRUCT* DISK, char* session_filename){
             return -1;
         }
 
-        DISK->sessionFd = open(
-            session_filename,
-            0,
-            O_RDWR
-        );
+        strncpy(DISK->sessionFileName, session_filename, 64);
 
-        ssize_t n_read = read(DISK->sessionFd, DISK->disk, DISK_SIZE);
-        if (n_read == -1) return -1;
+        FILE* f = fopen(session_filename, "r+");
+        if (fread(DISK->disk, 1, DISK_SIZE, f) == 0){
+            return -1;
+        }
+        fclose(f);
 
         DISK->mmappedFlag = 1;
     }
@@ -38,7 +37,7 @@ int _DISK_init(DISK_STRUCT* DISK, char* session_filename){
     // DISK to be created from scratch
     else{
         memset(DISK->disk, 0, DISK_SIZE);
-        DISK->sessionFd = -1;
+        strncpy(DISK->sessionFileName, "", 64);
         DISK->mmappedFlag = 0;
     }
 
@@ -48,8 +47,9 @@ int _DISK_init(DISK_STRUCT* DISK, char* session_filename){
 
 int _DISK_destroy(DISK_STRUCT* DISK){  
     if (DISK->mmappedFlag){
-        if (write(DISK->sessionFd, DISK->disk, DISK_SIZE) == -1) return -1;
-        if (close(DISK->sessionFd) != 0) return -1;
+        FILE* f =  fopen(DISK->sessionFileName, "w");
+        if (fwrite(DISK->disk, 1, DISK_SIZE, f) == 0) return -1;
+        fclose(f);
     }
     free(DISK);
     return 0;

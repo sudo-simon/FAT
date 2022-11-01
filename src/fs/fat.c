@@ -35,10 +35,8 @@ void _FAT_destroy(FAT_STRUCT* FAT){
 
 
 char _FAT_EOF(FAT_STRUCT* FAT, int block_index){
-    if (FAT->next[block_index] == -1)
-        return 1;
-    else
-        return 0;
+    if (FAT->next[block_index] == -1) return 1;
+    else return 0;
 }
 
 
@@ -78,5 +76,6 @@ int _FAT_allocateBlock(FAT_STRUCT* FAT, int block_index){
 
 void _FAT_deallocateBlock(FAT_STRUCT* FAT, int block_index){
     FAT->isFull[block_index] = 0;
+    FAT->next[block_index] = -1;
     return;
 }

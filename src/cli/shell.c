@@ -87,7 +87,7 @@ char* current_time_str(){
 
 int take_input(char *input_buf, char* input_msg){
 
-    char* buf = malloc(MAX_INPUT_LEN*sizeof(char));
+    char* buf;
     buf = readline(input_msg);
     int input_length = strlen(buf);
     if (input_length > 0){
@@ -97,7 +97,7 @@ int take_input(char *input_buf, char* input_msg){
         return 0;
     }
     else if (input_length > MAX_INPUT_LEN){
-        printf("Error: input can be a maximum of %d characters long",MAX_INPUT_LEN);
+        printf("[ERROR] Input can be a maximum of %d characters long\n",MAX_INPUT_LEN);
         free(buf);
         return 1;
     }

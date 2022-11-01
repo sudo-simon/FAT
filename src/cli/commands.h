@@ -73,6 +73,11 @@ allows to edit the file passed as an argument
 */
 int _edit(void* arg);
 
+/*
+saves the current session as a .fat file on disk
+*/
+int _save(void* arg);
+
 
 
 
@@ -96,8 +101,8 @@ const static char* CMD_ARRAY[TOTAL_COMMANDS] = {
     "rmdir",    // 8
     "cd",       // 9
     "ls",       // 10
-    "edit"      // 11
-    //TODO: comando FAT <--new / file> per apertura di fork()?
+    "edit",     // 11
+    "save"      // 12
 };
 
 /*
@@ -115,5 +120,6 @@ const static FN_PTR FN_ARRAY[TOTAL_COMMANDS] = {
     _rmdir,     // 8
     _cd,        // 9
     _ls,        // 10
-    _edit       // 11
+    _edit,      // 11
+    _save       // 12
 };

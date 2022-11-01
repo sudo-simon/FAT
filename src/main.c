@@ -73,7 +73,7 @@ int main(int argc, char** argv){
 
     // Input strings buffers
     char* input_msg = malloc(128*sizeof(char));
-    sprintf(input_msg, "\n%s >>> ",getenv("USER"));
+    //sprintf(input_msg, "\n[%s] %s >>> ",getenv("USER"),CWD->folderName);
 
     char* input = malloc(MAX_INPUT_LEN*sizeof(char));
     char** split_input = malloc(2*sizeof(char*));
@@ -84,25 +84,32 @@ int main(int argc, char** argv){
     int cmd_ret_value;
 
     shell_init();
+
+
     //DEBUG CODE
-    if(session_filename) printf("\n\nArgument passed! arg = %s\n",session_filename);
-    if(DEBUG_FLAG) printf("File passed as argument does not exist");
+    printf("diskmmappedFlag = %d\n",DISK->mmappedFlag);
+    printf("sessionFileName = %s\n",DISK->sessionFileName);
+    printf("CWD->numFiles = %d\n",CWD->numFiles);
+    printf("CWD->firstBlockIndex = %d\n",CWD->firstBlockIndex);
+    printf("CWD->size = %d\n",CWD->size);
+    printf("CWD->fileList[0]->name = %s\n",CWD->fileList[0]->name);
+
     
     // Main loop
     while(1){
 
         // Buffers reset
-
         strncpy(input, "", MAX_INPUT_LEN);
         strncpy(split_input[0], "", MAX_INPUT_LEN);
         strncpy(split_input[1], "", MAX_INPUT_LEN);
         cmd_index = -1;
 
+        sprintf(input_msg, "\n[%s] %s >>> ",getenv("USER"),CWD->folderName);
         take_input(input,input_msg);
         n_args = str_split(input, split_input);
 
         if (n_args > 1){
-            printf("Too many command arguments (max 1)");
+            printf("Too many command arguments (max 1)\n");
             continue;
         }
 
@@ -137,7 +144,7 @@ int main(int argc, char** argv){
 
                     // DISK, FAT, CWD and O_FILE deallocation
                     if (_DISK_destroy(DISK)){
-                        printf("[ERROR] Unable to unmap DISK!");
+                        printf("[ERROR] Unable to unmap DISK!\n");
                         continue;
                     }
                     _FAT_destroy(FAT);
@@ -145,7 +152,7 @@ int main(int argc, char** argv){
                     _FILE_fileHandleDestroy(O_FILE);
                 }
                 else{
-                    printf("quit doesn't take any arguments");
+                    printf("quit doesn't take any arguments\n");
                     continue;
                 }
             }
@@ -156,7 +163,7 @@ int main(int argc, char** argv){
         }
         // Invalid command
         else{
-            printf("%s is not a valid command",split_input[0]);
+            printf("%s is not a valid command\n",split_input[0]);
         }
 
     }

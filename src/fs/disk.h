@@ -11,7 +11,7 @@ int sessionFd
 typedef struct DISK_STRUCT {
     char disk[DISK_SIZE];
     char mmappedFlag;
-    int sessionFd;
+    char sessionFileName[64];
 } DISK_STRUCT;
 
 

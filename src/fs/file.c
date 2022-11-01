@@ -5,6 +5,22 @@
 #include "disk.h"
 #include "fat.h"
 #include "file.h"
+#include "aux.h"
+
+
+/* DEAD CODE
+int _FILE_contentListBlocks_comparator(const void* n1, const void* n2){
+    int a = *((int*) n1);
+    int b = *((int*) n2);
+    return a < b ? -1 : a > b ? +1 : 0;
+}
+
+int _FILE_FolderListElem_comparator(const void* n1, const void* n2){
+    FolderListElem* e1 = (FolderListElem*) n1;
+    FolderListElem* e2 = (FolderListElem*) n2;
+    return strncmp(e1->name, e2->name, MAX_FILENAME_LEN);
+}
+*/
 
 
 FolderHandle* _FILE_initRoot(DISK_STRUCT* DISK, FAT_STRUCT* FAT){
@@ -51,9 +67,9 @@ FolderHandle* _FILE_getRoot(DISK_STRUCT* DISK, FAT_STRUCT* FAT){
     root_handle->size = root->size;
     root_handle->previousFolderBlockIndex = root->previousFolderBlockIndex;
     root_handle->numFolders = root->numFolders;
-    _FILE_getContainedFolders(DISK, FAT, root, root_handle->folderList);
+    root_handle->folderList = _FILE_getContainedFolders(DISK, FAT, root);
     root_handle->numFiles = root->numFiles;
-    _FILE_getContainedFiles(DISK, FAT, root, root_handle->fileList);
+    root_handle->fileList = _FILE_getContainedFiles(DISK, FAT, root);
 
     free(root);
     return root_handle;
@@ -78,7 +94,11 @@ void _FILE_fileHandleDestroy(FileHandle* file_handle){
 }
 
 
-int _FILE_getContainedFolders(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderObject* folder, FolderListElem** folder_block_list){
+
+
+
+
+FolderListElem** _FILE_getContainedFolders(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderObject* folder){
 
     int n_folders = 0;
     int* folder_blocks_i = calloc(folder->size,sizeof(int));
@@ -94,7 +114,7 @@ int _FILE_getContainedFolders(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderObject* 
     for (int i=0; i<folder->size; ++i){
         
         // End of block reached, trying to read from the next one
-        if ((i-114)%128 == 0){
+        if ((i-CONTENT_LIST_BLOCKS_SIZE)%128 == 0){
             b_index = next_index;
             next_index = _FAT_getNextBlock(FAT, next_index);
             block_traversed_flag = 1;
@@ -105,6 +125,7 @@ int _FILE_getContainedFolders(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderObject* 
 
         // I am reading the first block of the folder
         if (! block_traversed_flag){
+            //if (folder->contentListBlocks[i] < 0) continue;
             char* disk_object = _DISK_readBytes(DISK, folder->contentListBlocks[i], BLOCK_SIZE);
             // First byte of the Object is the isFolder flag
             if (disk_object[0] == 1){
@@ -115,22 +136,22 @@ int _FILE_getContainedFolders(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderObject* 
         
         // I am reading a successive block of the folder
         else{
+            if (folder_block[(i-CONTENT_LIST_BLOCKS_SIZE)%128] == -1) continue;
             char* disk_object = _DISK_readBytes(
                 DISK, 
-                folder_block[(i-114)%128], 
+                folder_block[(i-CONTENT_LIST_BLOCKS_SIZE)%128], 
                 BLOCK_SIZE
             );
             // First byte of the Object is the isFolder flag
             if (disk_object[0] == 1){
-                folder_blocks_i[n_folders++] = folder_block[(i-114)%128];
+                folder_blocks_i[n_folders++] = folder_block[(i-CONTENT_LIST_BLOCKS_SIZE)%128];
             }
             free(disk_object);
         }
 
     }
 
-    folder_block_list = calloc(n_folders, sizeof(struct FolderListElem*));
-    //TODO: ordinarli in ordine alfabetico per permettere una binary search per la _seek
+    FolderListElem** folder_list = calloc(n_folders, sizeof(struct FolderListElem*));
 
     int i = 0;
     while ((i < folder->numFolders) && (folder_blocks_i[i] != -1)){
@@ -140,19 +161,22 @@ int _FILE_getContainedFolders(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderObject* 
         strncpy(e->name, f->folderName, MAX_FILENAME_LEN);
         e->firstBlockIndex = folder_blocks_i[i];
         e->size = f->size;
-        folder_block_list[i] = e;
+        folder_list[i] = e;
 
         free(f);
         ++i;
     }
 
+    // Alphabetically sorting folder_list
+    _AUX_alphabeticalSort(folder_list, n_folders);
+
     free(folder_blocks_i);
-    return n_folders;
+    return folder_list;
 
 }
 
 
-int _FILE_getContainedFiles(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderObject* folder, FolderListElem** file_block_list){
+FolderListElem** _FILE_getContainedFiles(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderObject* folder){
 
     int n_files = 0;
     int* file_blocks_i = calloc(folder->size, sizeof(int));
@@ -168,7 +192,7 @@ int _FILE_getContainedFiles(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderObject* fo
     for (int i=0; i<folder->size; ++i){
 
         // End of block reached, trying to read from the next one
-        if ((i-114)%128 == 0){
+        if ((i-CONTENT_LIST_BLOCKS_SIZE)%128 == 0){
             b_index = next_index;
             next_index = _FAT_getNextBlock(FAT, next_index);
             block_traversed_flag = 1;
@@ -189,22 +213,22 @@ int _FILE_getContainedFiles(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderObject* fo
         
         // I am reading a successive block of the folder
         else{
+            if (folder_block[(i-CONTENT_LIST_BLOCKS_SIZE)%128] == -1) continue;
             char* disk_object = _DISK_readBytes(
                 DISK, 
-                folder_block[(i-114)%128], 
+                folder_block[(i-CONTENT_LIST_BLOCKS_SIZE)%128], 
                 BLOCK_SIZE
             );
             // First byte of the Object is the isFolder flag
             if (disk_object[0] == 0){
-                file_blocks_i[n_files++] = folder_block[(i-114)%128];
+                file_blocks_i[n_files++] = folder_block[(i-CONTENT_LIST_BLOCKS_SIZE)%128];
             }
             free(disk_object);
         }
 
     }
 
-    file_block_list = calloc(n_files, sizeof(struct FolderListElem*));
-    //TODO: ordinarli in ordine alfabetico per permettere una binary search per la _seek
+    FolderListElem** file_list = calloc(n_files, sizeof(struct FolderListElem*));
 
     int i = 0;
     while ((i < folder->size) && (file_blocks_i[i] != -1)){
@@ -214,35 +238,64 @@ int _FILE_getContainedFiles(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderObject* fo
         strncpy(e->name, f->fileName, MAX_FILENAME_LEN);
         e->firstBlockIndex = file_blocks_i[i];
         e->size = f->size;
-        file_block_list[i] = e;
+        file_list[i] = e;
 
         free(f);
         ++i;
     }
 
-    free(file_blocks_i);
-    return n_files;
+    // Alphabetically sorting file_list
+    _AUX_alphabeticalSort(file_list, n_files);
 
+    free(file_blocks_i);
+    return file_list;
+
+}
+
+
+
+
+
+
+int _FILE_searchFolderInCWD(FolderHandle* CWD, char* folder_name){
+    int left = 0;
+    int right = CWD->numFolders - 1;
+    while (left <= right){
+        int mid = left + ((right-left) / 2);
+        int res = strncmp(folder_name, CWD->folderList[mid]->name, MAX_FILENAME_LEN);
+        if (res == 0) return mid;
+        else if (res > 0) left = mid+1;
+        else right = mid-1;
+    }
+    return -1;
+}
+int _FILE_searchFileInCWD(FolderHandle* CWD, char* file_name){
+    int left = 0;
+    int right = CWD->numFiles - 1;
+    while (left <= right){
+        int mid = left + ((right-left) / 2);
+        int res = strncmp(file_name, CWD->fileList[mid]->name, MAX_FILENAME_LEN);
+        if (res == 0) return mid;
+        else if (res > 0) left = mid+1;
+        else right = mid-1;
+    }
+    return -1;
 }
 
 
 char _FILE_existingFileName(FolderHandle* CWD, char* file_name){
-
-    for (int i=0; i<CWD->numFiles; ++i){
-        if (strncmp(CWD->fileList[i]->name, file_name, MAX_FILENAME_LEN) == 0)
-            return 1;
-    }
-    return 0;
+    if (_FILE_searchFileInCWD(CWD, file_name) != -1) return 1;
+    else return 0;
 }
 
 char _FILE_existingFolderName(FolderHandle* CWD, char* folder_name){
-
-    for (int i=0; i<CWD->numFolders; ++i){
-        if (strncmp(CWD->folderList[i]->name, folder_name, MAX_FILENAME_LEN) == 0)
-            return 1;
-    }
-    return 0;
+    if (_FILE_searchFolderInCWD(CWD, folder_name) != -1) return 1;
+    else return 0;
 }
+
+
+
+
 
 
 int _FILE_createFile(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char* file_name){
@@ -252,11 +305,11 @@ int _FILE_createFile(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char
     strncpy(new_file->fileName, file_name, MAX_FILENAME_LEN);
     new_file->nextBlockIndex = -1;
     new_file->size = 0;
-    memset(new_file->firstDataBlock, 0, BLOCK_SIZE-44);
+    memset(new_file->firstDataBlock, 0, FIRST_DATA_BLOCK_SIZE);
 
     int block = _FAT_findFirstFreeBlock(FAT);
     if (block == -1){
-        printf("[ERROR] No space left on DISK!");
+        printf("[ERROR] No space left on DISK!\n");
         return -1;
     }
     if (_FAT_allocateBlock(FAT, block) != 0) return -1;
@@ -275,15 +328,15 @@ int _FILE_folderAddFile(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, F
     int next_block_index = -1;
 
     // I need to allocate another block for the folder
-    if ((CWD->size-114)%128 == 0){
+    if ((CWD->size-CONTENT_LIST_BLOCKS_SIZE)%128 == 0){
 
         int next_folder_block[128];
-        memset(next_folder_block, 0, BLOCK_SIZE);
+        memset(next_folder_block, -1, BLOCK_SIZE);
         next_folder_block[0] = file_first_block;
 
         next_block_index = _FAT_findFirstFreeBlock(FAT);
         if (next_block_index == -1){
-            printf("[ERROR] No space left on DISK!");
+            printf("[ERROR] No space left on DISK!\n");
             return -1;
         }
         if (_FAT_allocateBlock(FAT, next_block_index) != 0) return -1;
@@ -295,20 +348,30 @@ int _FILE_folderAddFile(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, F
     }
 
     //TODO: Algorithm check (spooky math here)
-    FolderObject* folder_obj = (FolderObject*) _DISK_readBytes(DISK, CWD->firstBlockIndex, sizeof(struct FolderObject));
+    FolderObject* folder_obj = (FolderObject*) _DISK_readBytes(
+        DISK, 
+        CWD->firstBlockIndex, 
+        sizeof(struct FolderObject)
+    );
     folder_obj->size++;
     folder_obj->numFiles++;
     
-    if (folder_obj->size <= 114){
+    if (folder_obj->size <= CONTENT_LIST_BLOCKS_SIZE){
         folder_obj->contentListBlocks[folder_obj->size-1] = file_first_block;
+        // Mantaining block index sort
+        _AUX_blockSort(folder_obj->contentListBlocks, CONTENT_LIST_BLOCKS_SIZE);
     }
     else{
-        if (folder_obj->size == (114+1)){
+        if (folder_obj->size == (CONTENT_LIST_BLOCKS_SIZE+1)){
             folder_obj->nextBlockIndex = next_block_index;
         }
 
         int* folder_block = (int*) _DISK_readBytes(DISK, CWD->currentBlockIndex, BLOCK_SIZE);
-        folder_block[(folder_obj->size-(114+1))%128] = file_first_block;
+        folder_block[(folder_obj->size-(CONTENT_LIST_BLOCKS_SIZE+1))%128] = file_first_block;
+
+        // Mantaining block index sort
+        _AUX_blockSort(folder_block, 128);
+
         _DISK_writeBytes(DISK, CWD->currentBlockIndex, (char*) folder_block, BLOCK_SIZE);
         free(folder_block);
     }
@@ -326,5 +389,423 @@ int _FILE_folderAddFile(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, F
     e->size = new_file->size;
     CWD->fileList[CWD->numFiles-1] = e;
 
+    /*/DEBUG SECTION
+    printf("-----> Before sorting:\n");
+    for (int i=0; i<CWD->numFiles;  ++i){
+        printf("fileList[%d] = %s\n",i,CWD->fileList[i]->name);
+    }
+    */
+
+    // Making sure the alphabetical sort is mantained
+    _AUX_alphabeticalSort(CWD->fileList, CWD->numFiles);
+
+    /*/DEBUG SECTION
+    printf("-----> After sorting:\n");
+    for (int i=0; i<CWD->numFiles;  ++i){
+        printf("fileList[%d] = %s\n",i,CWD->fileList[i]->name);
+    }
+    */
+
     return 0;
+}
+
+
+
+
+
+
+int _FILE_deleteFile(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char* file_name){
+    int cwd_index = _FILE_searchFileInCWD(CWD, file_name);
+    if (cwd_index == -1){
+        printf("No file named %s\n",file_name);
+        return -1;
+    }
+
+    FileObject* file_object = (FileObject*) _DISK_readBytes(
+        DISK, 
+        CWD->fileList[cwd_index]->firstBlockIndex, 
+        sizeof(struct FileObject)
+    );
+
+    int b_index = CWD->fileList[cwd_index]->firstBlockIndex;
+    int next_index = file_object->nextBlockIndex;
+    
+    // Procedurally deallocate FAT entries
+    while (b_index != -1){
+        _FAT_deallocateBlock(FAT, b_index);
+        b_index = next_index;
+        next_index = _FAT_getNextBlock(FAT, next_index);
+    }
+
+    if (_FILE_folderRemoveFile(DISK, FAT, CWD, CWD->fileList[cwd_index]->firstBlockIndex) != 0){
+        printf("[ERROR] Impossible to remove file from folder!\n");
+        return -1;
+    }
+
+    // Putting the element to be removed at the end of the list for the realloc
+    FolderListElem* tmp = CWD->fileList[cwd_index];
+    CWD->fileList[cwd_index] = CWD->fileList[CWD->numFiles-1];
+    CWD->fileList[CWD->numFiles-1] = tmp;
+
+    free(CWD->fileList[CWD->numFiles-1]);
+    CWD->fileList = realloc(CWD->fileList, ((CWD->numFiles-1) * sizeof(struct FolderListElem*)));
+    CWD->size--;
+    CWD->numFiles--;
+
+    free(file_object);
+    return 0;
+
+}
+
+
+int _FILE_folderRemoveFile(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, int file_first_block){
+    
+    FolderObject* folder_object = (FolderObject*) _DISK_readBytes(
+        DISK, 
+        CWD->firstBlockIndex, 
+        sizeof(struct FolderObject)
+    );
+
+    // Remove the file block index from the FolderObject or a subsequent folder block
+    int content_i = -1;
+    if (folder_object->size <= CONTENT_LIST_BLOCKS_SIZE){
+        content_i = _AUX_intBinarySearch(
+            folder_object->contentListBlocks, 
+            CONTENT_LIST_BLOCKS_SIZE, 
+            file_first_block
+        );
+
+        folder_object->contentListBlocks[content_i] = -1;
+        _AUX_blockSort(folder_object->contentListBlocks, CONTENT_LIST_BLOCKS_SIZE);   
+    }
+    else{
+        content_i = _AUX_intBinarySearch(
+            folder_object->contentListBlocks, 
+            CONTENT_LIST_BLOCKS_SIZE, 
+            file_first_block
+        );
+        
+        if (content_i != -1){
+            folder_object->contentListBlocks[content_i] = -1;
+            _AUX_blockSort(folder_object->contentListBlocks, CONTENT_LIST_BLOCKS_SIZE);
+        }
+        else{
+            int b_index = folder_object->nextBlockIndex;
+            int next_index = _FAT_getNextBlock(FAT, b_index);
+            while (b_index != -1){
+                int* folder_block = (int*) _DISK_readBytes(DISK, b_index, BLOCK_SIZE);
+                b_index = next_index;
+                next_index = _FAT_getNextBlock(FAT, next_index);
+
+                content_i = _AUX_intBinarySearch(
+                    folder_block, 
+                    128, 
+                    file_first_block
+                );
+                if (content_i == -1){
+                    free(folder_block);
+                    continue;
+                }
+
+                folder_block[content_i] = -1;
+                _AUX_blockSort(folder_block, 128);
+                _DISK_writeBytes(DISK, b_index, (char*) folder_block, BLOCK_SIZE);
+                free(folder_block);
+            }
+        }
+    }
+
+    folder_object->size--;
+    folder_object->numFiles--;
+    _DISK_writeBytes(DISK, CWD->firstBlockIndex, (char*) folder_object, sizeof(struct FolderObject));
+
+    free(folder_object);
+    return 0;
+
+}
+
+
+
+
+
+
+int _FILE_createFolder(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char* folder_name){
+
+    FolderObject* new_folder = calloc(1, sizeof(struct FolderObject));
+    new_folder->isFolder = 1;
+    strncpy(new_folder->folderName, folder_name, MAX_FILENAME_LEN);
+    new_folder->nextBlockIndex = -1;
+    new_folder->size = 0;
+    new_folder->numFolders = 0;
+    new_folder->numFiles = 0;
+    new_folder->previousFolderBlockIndex = CWD->firstBlockIndex;
+    for (int i=0; i<CONTENT_LIST_BLOCKS_SIZE; ++i){
+        new_folder->contentListBlocks[i] = -1;
+    }
+
+    int block = _FAT_findFirstFreeBlock(FAT);
+    if (block == -1){
+        printf("[ERROR] No space left on DISK!\n");
+        return -1;
+    }
+    if (_FAT_allocateBlock(FAT, block) != 0) return -1;
+    
+    if (_DISK_writeBytes(DISK, block, (char*) new_folder, sizeof(struct FolderObject)) == -1) return -1;
+    if (_FILE_folderAddFolder(DISK, FAT, CWD, new_folder, block) == -1) return -1;
+    
+    free(new_folder);
+    return block;
+
+}
+
+
+int _FILE_folderAddFolder(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, FolderObject* new_folder, int folder_first_block){
+
+    int next_block_index = -1;
+
+    // I need to allocate another block for the folder
+    if ((CWD->size-CONTENT_LIST_BLOCKS_SIZE)%128 == 0){
+
+        int next_folder_block[128];
+        memset(next_folder_block, -1, BLOCK_SIZE);
+        next_folder_block[0] = folder_first_block;
+
+        next_block_index = _FAT_findFirstFreeBlock(FAT);
+        if (next_block_index == -1){
+            printf("[ERROR] No space left on DISK!\n");
+            return -1;
+        }
+        if (_FAT_allocateBlock(FAT, next_block_index) != 0) return -1;
+        _FAT_setNextBlock(FAT, CWD->currentBlockIndex, next_block_index);
+        
+        if (_DISK_writeBytes(DISK, next_block_index, (char*) next_folder_block, BLOCK_SIZE) == -1) return -1;
+        CWD->currentBlockIndex = next_block_index;
+
+    }
+
+    //TODO: Algorithm check (spooky math here)
+    FolderObject* folder_obj = (FolderObject*) _DISK_readBytes(
+        DISK, 
+        CWD->firstBlockIndex, 
+        sizeof(struct FolderObject)
+    );
+    folder_obj->size++;
+    folder_obj->numFolders++;
+    
+    if (folder_obj->size <= CONTENT_LIST_BLOCKS_SIZE){
+        folder_obj->contentListBlocks[folder_obj->size-1] = folder_first_block;
+        // Mantaining block index sort
+        _AUX_blockSort(folder_obj->contentListBlocks, CONTENT_LIST_BLOCKS_SIZE);
+    }
+    else{
+        if (folder_obj->size == (CONTENT_LIST_BLOCKS_SIZE+1)){
+            folder_obj->nextBlockIndex = next_block_index;
+        }
+
+        int* folder_block = (int*) _DISK_readBytes(DISK, CWD->currentBlockIndex, BLOCK_SIZE);
+        folder_block[(folder_obj->size-(CONTENT_LIST_BLOCKS_SIZE+1))%128] = folder_first_block;
+
+        // Mantaining block index sort
+        _AUX_blockSort(folder_block, 128);
+
+        _DISK_writeBytes(DISK, CWD->currentBlockIndex, (char*) folder_block, BLOCK_SIZE);
+        free(folder_block);
+    }
+
+    _DISK_writeBytes(DISK, CWD->firstBlockIndex, (char*) folder_obj, sizeof(struct FolderObject));
+    free(folder_obj);
+    
+    CWD->size++;
+    CWD->numFolders++;
+    CWD->folderList = realloc(CWD->folderList, (CWD->numFolders * sizeof(struct FolderListElem*)));
+
+    FolderListElem* e = calloc(1, sizeof(struct FolderListElem));
+    strncpy(e->name, new_folder->folderName, MAX_FILENAME_LEN);
+    e->firstBlockIndex = folder_first_block;
+    e->size = new_folder->size;
+    CWD->folderList[CWD->numFolders-1] = e;
+
+    /*/DEBUG SECTION
+    printf("-----> Before sorting:\n");
+    for (int i=0; i<CWD->numFolders;  ++i){
+        printf("folderList[%d] = %s\n",i,CWD->folderList[i]->name);
+    }
+    */
+
+    // Making sure the alphabetical sort is mantained
+    _AUX_alphabeticalSort(CWD->folderList, CWD->numFolders);
+
+    /*/DEBUG SECTION
+    printf("-----> After sorting:\n");
+    for (int i=0; i<CWD->numFolders;  ++i){
+        printf("folderList[%d] = %s\n",i,CWD->folderList[i]->name);
+    }
+    */
+
+    return 0;
+
+}
+
+
+
+
+
+
+int _FILE_deleteFolder(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char* folder_name){
+
+    int cwd_index = _FILE_searchFolderInCWD(CWD, folder_name);
+    if (cwd_index == -1){
+        printf("No folder named %s\n",folder_name);
+        return -1;
+    }
+
+    FolderObject* folder_object = (FolderObject*) _DISK_readBytes(
+        DISK, 
+        CWD->folderList[cwd_index]->firstBlockIndex, 
+        sizeof(struct FolderObject)
+    );
+
+    int b_index = CWD->folderList[cwd_index]->firstBlockIndex;
+    int next_index = folder_object->nextBlockIndex;
+    
+    // Recursively deallocates subfolders
+    //TODO: recursive_folder_dealloc
+
+    // Procedurally deallocate FAT entries
+    while (b_index != -1){
+        _FAT_deallocateBlock(FAT, b_index);
+        b_index = next_index;
+        next_index = _FAT_getNextBlock(FAT, next_index);
+    }
+
+    if (_FILE_folderRemoveFolder(DISK, FAT, CWD, CWD->folderList[cwd_index]->firstBlockIndex) != 0){
+        printf("[ERROR] Impossible to remove folder %s from folder!\n",folder_name);
+        return -1;
+    }
+
+    // Putting the element to be removed at the end of the list for the realloc
+    FolderListElem* tmp = CWD->folderList[cwd_index];
+    CWD->folderList[cwd_index] = CWD->folderList[CWD->numFolders-1];
+    CWD->folderList[CWD->numFolders-1] = tmp;
+
+    free(CWD->folderList[CWD->numFolders-1]);
+    CWD->folderList = realloc(CWD->folderList, ((CWD->numFolders-1) * sizeof(struct FolderListElem*)));
+    CWD->size--;
+    CWD->numFolders--;
+
+    free(folder_object);
+    return 0;
+
+}
+
+
+int _FILE_folderRemoveFolder(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, int folder_first_block){
+
+    FolderObject* folder_object = (FolderObject*) _DISK_readBytes(
+        DISK, 
+        CWD->firstBlockIndex, 
+        sizeof(struct FolderObject)
+    );
+
+    // Remove the file block index from the FolderObject or a subsequent folder block
+    int content_i = -1;
+    if (folder_object->size <= CONTENT_LIST_BLOCKS_SIZE){
+        content_i = _AUX_intBinarySearch(
+            folder_object->contentListBlocks, 
+            CONTENT_LIST_BLOCKS_SIZE, 
+            folder_first_block
+        );
+
+        folder_object->contentListBlocks[content_i] = -1;
+        _AUX_blockSort(folder_object->contentListBlocks, CONTENT_LIST_BLOCKS_SIZE);   
+    }
+    else{
+        content_i = _AUX_intBinarySearch(
+            folder_object->contentListBlocks, 
+            CONTENT_LIST_BLOCKS_SIZE, 
+            folder_first_block
+        );
+        
+        if (content_i != -1){
+            folder_object->contentListBlocks[content_i] = -1;
+            _AUX_blockSort(folder_object->contentListBlocks, CONTENT_LIST_BLOCKS_SIZE);
+        }
+        else{
+            int b_index = folder_object->nextBlockIndex;
+            int next_index = _FAT_getNextBlock(FAT, b_index);
+            while (b_index != -1){
+                int* folder_block = (int*) _DISK_readBytes(DISK, b_index, BLOCK_SIZE);
+                b_index = next_index;
+                next_index = _FAT_getNextBlock(FAT, next_index);
+
+                content_i = _AUX_intBinarySearch(
+                    folder_block, 
+                    128, 
+                    folder_first_block
+                );
+                if (content_i == -1){
+                    free(folder_block);
+                    continue;
+                }
+
+                folder_block[content_i] = -1;
+                _AUX_blockSort(folder_block, 128);
+                _DISK_writeBytes(DISK, b_index, (char*) folder_block, BLOCK_SIZE);
+                free(folder_block);
+            }
+        }   
+    }
+
+    folder_object->size--;
+    folder_object->numFolders--;
+    _DISK_writeBytes(DISK, CWD->firstBlockIndex, (char*) folder_object, sizeof(struct FolderObject));
+
+    free(folder_object);
+    return 0;
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+char* _FILE_getFileContent(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char* file_name){
+    int cwd_index = _FILE_searchFileInCWD(CWD, file_name);
+    if (CWD->fileList[cwd_index]->size == 0) return NULL;
+    char* output_buf = calloc(CWD->fileList[cwd_index]->size,sizeof(char));
+
+    int b_index = CWD->fileList[cwd_index]->firstBlockIndex;
+    int next_index = _FAT_getNextBlock(FAT, b_index);
+    int read_bytes = 0;
+    
+    while(b_index != -1){
+
+        // I am reading the first file block
+        if (read_bytes == 0){
+            FileObject* file = (FileObject*) _DISK_readBytes(DISK, b_index, sizeof(struct FileObject));
+            memcpy(output_buf, file->firstDataBlock, FIRST_DATA_BLOCK_SIZE);
+            read_bytes = strlen(output_buf);
+            free(file);
+        }
+
+        // I am reading the next file block(s)
+        else{
+            char* data_block = _DISK_readBytes(DISK, b_index, BLOCK_SIZE);
+            memcpy(output_buf+read_bytes, data_block, BLOCK_SIZE);
+            read_bytes = strlen(output_buf);
+            free(data_block);
+        }
+
+        b_index = next_index;
+        next_index = _FAT_getNextBlock(FAT, next_index);
+    }
+
+    return output_buf;
 }
