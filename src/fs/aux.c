@@ -38,16 +38,14 @@ void blockMerge(int* arr, int left, int mid, int right){
         k++;
     }
 
-    /* Copy the remaining elements of L[], if there
-    are any */
+    /* Copy the remaining elements of L[], if there are any */
     while (i < n1) {
         arr[k] = L[i];
         i++;
         k++;
     }
 
-    /* Copy the remaining elements of R[], if there
-    are any */
+    /* Copy the remaining elements of R[], if there are any */
     while (j < n2) {
         arr[k] = R[j];
         j++;
@@ -103,16 +101,14 @@ void FolderListElemMerge(FolderListElem** arr, int left, int mid, int right){
         k++;
     }
 
-    /* Copy the remaining elements of L[], if there
-    are any */
+    /* Copy the remaining elements of L[], if there are any */
     while (i < n1) {
         arr[k] = L[i];
         i++;
         k++;
     }
 
-    /* Copy the remaining elements of R[], if there
-    are any */
+    /* Copy the remaining elements of R[], if there are any */
     while (j < n2) {
         arr[k] = R[j];
         j++;
@@ -123,7 +119,7 @@ void FolderListElemMerge(FolderListElem** arr, int left, int mid, int right){
 
 void FolderListElemMergeSort(FolderListElem** arr, int left, int right){
     if (left < right) {
-        // Same as (l+r)/2, but avoids overflow for
+        // Same as (left+right)/2, but avoids overflow for
         // large l and h
         int mid = left + ((right - left) / 2);
  

@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <signal.h> //TODO: catturare segnali SIGTERM e installare dei SIGUSR?
 // Readline library (libreadline-dev) 
 #include <readline/readline.h>
 #include <readline/history.h>
@@ -13,7 +12,7 @@
 
 extern char* USER;
 
-int shell_init(){   //TODO: checks di corretta init
+int shell_init(){   
 
     char* time = current_time_str();
     clear_all();
