@@ -32,7 +32,7 @@ int _FS_write(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char* file_
         CWD, 
         file_name, 
         src_buffer,
-        strlen(src_buffer)
+        strlen(src_buffer)+1
     );
 }
 
