@@ -108,7 +108,29 @@ int take_input(char *input_buf, char* input_msg){
 }
 
 
-int str_split(char *in, char **out){
+
+int str_split(char *in, char** out){
+
+    int n_str = 0;
+    char* token = strtok(in, " ");
+
+    while (token != NULL){
+        if (n_str == 0) strncpy(out[0], token, MAX_INPUT_LEN);
+        if (n_str == 1) strncpy(out[1], token, MAX_INPUT_LEN);
+        token = strtok(NULL, " ");
+        n_str++;
+    }
+
+    return n_str-1;
+
+}
+
+
+
+
+
+/* OLD FUNCTION
+int str_split(char *in, char** out){
 
     int n = 0, current_word_index = 0;
     char c = '\0', prev_c = '\0';
@@ -147,3 +169,7 @@ int str_split(char *in, char **out){
     return n;
 
 }
+*/
+
+
+

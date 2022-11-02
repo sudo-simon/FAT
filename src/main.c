@@ -62,18 +62,24 @@ int main(int argc, char** argv){
     // ------------------------------------------------------------------------------------------ //
     // Main cycle
 
-
-    // Input strings buffers
-    char* input_msg = malloc(128*sizeof(char));
-    //sprintf(input_msg, "\n[%s] %s >>> ",getenv("USER"),CWD->folderName);
-
-    char* input = malloc(MAX_INPUT_LEN*sizeof(char));
-    char** split_input = malloc(2*sizeof(char*));
-    split_input[0] = malloc(MAX_INPUT_LEN*sizeof(char));
-    split_input[1] = malloc(MAX_INPUT_LEN*sizeof(char));
+    
     int n_args;
     short cmd_index;
+
+    // Input strings buffers
+    //char* input_msg = malloc(128*sizeof(char));
+    //char* input = malloc(MAX_INPUT_LEN*sizeof(char));
+    //char** split_input = calloc(2, sizeof(char*));
+    //split_input[0] = malloc(MAX_INPUT_LEN*sizeof(char));
+    //split_input[1] = malloc(MAX_INPUT_LEN*sizeof(char));
     //int cmd_ret_value; // UNUSED
+
+
+    char input_msg[128];
+    char input[MAX_INPUT_LEN];
+    char split_input_0[MAX_INPUT_LEN];
+    char split_input_1[MAX_INPUT_LEN];
+    char* split_input[2] = { split_input_0, split_input_1 };
 
     shell_init();
 
@@ -120,12 +126,14 @@ int main(int argc, char** argv){
             // if cmd == quit buffers get freed
             if (strcmp(split_input[0],"quit") == 0){
                 if (n_args == 0){
+
                     // Buffers deallocation
-                    free(input_msg);
-                    free(input);
-                    free(split_input[0]);
-                    free(split_input[1]);
-                    free(split_input);
+
+                    //free(input_msg);
+                    //free(input);
+                    //free(split_input[0]);
+                    //free(split_input[1]);
+                    //free(split_input);
 
                     // DEBUG CODE
                     /*printf(
@@ -143,6 +151,7 @@ int main(int argc, char** argv){
                     _FAT_destroy(FAT);
                     _FILE_folderHandleDestroy(CWD);
                     _FILE_fileHandleDestroy(O_FILE);
+
                 }
                 else{
                     printf("quit doesn't take any arguments\n");
