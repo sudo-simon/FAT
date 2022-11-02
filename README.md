@@ -161,6 +161,9 @@ int _FILE_deleteFile(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char
     CWD->size--;
     CWD->numFiles--;
 
+    // Mantaining the alphabetical sorting
+    _AUX_alphabeticalSort(CWD->fileList, CWD->numFiles);
+
     free(file_object);
     return 0;
 
@@ -431,6 +434,9 @@ int _FILE_deleteFolder(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, ch
     CWD->folderList = realloc(CWD->folderList, ((CWD->numFolders-1) * sizeof(struct FolderListElem*)));
     CWD->size--;
     CWD->numFolders--;
+
+    // Mantaining the alphabetical sorting
+    _AUX_alphabeticalSort(CWD->folderList, CWD->numFolders);
 
     free(folder_object);
     return 0;
