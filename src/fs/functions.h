@@ -3,9 +3,6 @@
 #include "fat.h"
 #include "file.h"
 
-//TODO: i parametri delle funzioni andranno probabilmente cambiati in strutture dati inizializzate
-//TODO: dai wrapper in commands.c
-
 int _FS_createFile(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char* file_name);
 
 int _FS_eraseFile(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char* file_name);

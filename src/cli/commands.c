@@ -20,7 +20,6 @@ extern FAT_STRUCT* FAT;
 extern FolderHandle* CWD;
 extern FileHandle* O_FILE;
 
-//TODO: input string sanification!!
 
 int _quit(void* arg){
     printf("Exiting FAT...\n");

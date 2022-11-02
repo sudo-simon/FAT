@@ -80,20 +80,16 @@ int _FS_changeDir(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char* d
 
 int _FS_listDir(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD){
     
-    printf("total %d\n",CWD->size);
+    printf("Total %d\n",CWD->size);
 
     for (int i=0; i<CWD->numFolders; ++i){
-
         FolderListElem* folder = CWD->folderList[i];
         printf("[%d elems] %s/\n",folder->size, folder->name);
-
     }
 
     for (int i=0; i<CWD->numFiles; ++i){
-
         FolderListElem* file = CWD->fileList[i];
         printf("[%d bytes] %s\n",file->size, file->name);
-
     }
 
     return 0;

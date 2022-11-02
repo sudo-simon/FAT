@@ -30,9 +30,8 @@ int main(int argc, char** argv){
     // ------------------------------------------------------------------------------------------ //
     // Argument passing and initializations (DISK, FAT, CWD, O_FILE)
 
-    //TODO: possibilità di passare un parametro: nome del file su cui è stata salvata una sessione FAT
 
-    // Argument passing, either the name of a session file or "_fork_test_ (DEBUGGING)"
+    // Argument passing
     char* session_filename = NULL;
     if (argc > 1)
         session_filename = argv[1];

@@ -423,6 +423,7 @@ int _FILE_folderAddFile(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, F
 
 
 int _FILE_deleteFile(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char* file_name){
+    
     int cwd_index = _FILE_searchFileInCWD(CWD, file_name);
     if (cwd_index == -1){
         printf("No file named %s\n",file_name);
@@ -681,8 +682,10 @@ int _FILE_deleteFolder(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, ch
 
         if (! recursive_flag){
             char ans;
+            //int ans;
             printf("The folder contains other files and folders.\nDo you want to recursively remove them all? [y/n]: ");
             scanf("%c",&ans);
+            //ans = fgetc(stdin);
             if (ans == 'n' || ans == 'N'){
                 free(folder_object);
                 return 0;
@@ -864,7 +867,7 @@ int _FILE_changeWorkingDirectory(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandl
     // You can never be too much careful
     //new_CWD->previousFolderBlockIndex = CWD->firstBlockIndex;
 
-    // Sostituisco i campip di CWD
+    // Swapping CWD fields
     strncpy(CWD->folderName, new_CWD->folderName, MAX_FILENAME_LEN);
     CWD->firstBlockIndex = b_index;
 
@@ -877,6 +880,7 @@ int _FILE_changeWorkingDirectory(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandl
     CWD->size = new_CWD->size;
     CWD->previousFolderBlockIndex = new_CWD->previousFolderBlockIndex;
 
+    // Freeing all previously allocated struct pointers
     for (int i=0; i<n_folders; ++i){
         free(CWD->folderList[i]);
     }
@@ -905,6 +909,7 @@ int _FILE_changeWorkingDirectory(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandl
 
 
 int _FILE_getFileContent(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char* file_name, char* dest_buffer){
+    
     int cwd_index = _FILE_searchFileInCWD(CWD, file_name);
     if (CWD->fileList[cwd_index]->size == 0) return -1;
 
@@ -1034,7 +1039,7 @@ int _FILE_writeFileContent(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD
 
 
 
-void _FILE_recursiveNameSearch(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* current_dir, char* name, char* found_paths[1024], int* found, char* current_path, int chars_to_delete){
+void _FILE_recursiveNameSearch(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* current_dir, char* name, char** found_paths, int* found, char* current_path, int chars_to_delete){
 
     // Max number of results reached
     if (*found >= 100) return;
