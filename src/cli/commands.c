@@ -2,10 +2,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/ucontext.h>
 #include <unistd.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
+#include <ucontext.h>
 // My headers
 #include "../constants.h"
 #include "../cli/shell.h"
@@ -14,6 +13,13 @@
 #include "../fs/disk.h"
 #include "../fs/fat.h"
 #include "../fs/file.h"
+#include "../editor/editor.c"
+
+// Global variables used for context switching
+#define STACK_SIZE 65536    // 64KiB stack for the context switch to the editor
+char* EDITOR_FILENAME;      // Filename passed to the kilo editor
+ucontext_t MAIN_CONTEXT;    // main context use for context switching
+
 
 extern DISK_STRUCT* DISK;
 extern FAT_STRUCT* FAT;
@@ -238,10 +244,51 @@ int _ls(void *arg){
 }
 
 
+// Auxiliary function for ucontext switching
+void _aux_editorStart(void){
+    _EDITOR_start(EDITOR_FILENAME, MAIN_CONTEXT);
+}
+
 int _edit(void *arg){
     //TODO: implementare Kilo
+
     printf("_edit not implemented yet\n");
+
+    /*
+    char* file_name = (char*) arg;
+    if (strlen(file_name) == 0){
+        printf("Name of the file to edit is needed\n");
+        return -1;
+    }
+    else if (strlen(file_name) > MAX_FILENAME_LEN){
+        printf("File name too long! It can be a maximum of %d characters long\n",MAX_FILENAME_LEN);
+        return -1;
+    }
+
+    if (! _FILE_existingFileName(CWD, file_name)){
+        printf("There is no file named %s in this folder\n",file_name);
+        return -1;
+    }
+
+    EDITOR_FILENAME = file_name;
+    ucontext_t editor_context;
+
+    getcontext(&editor_context);
+    char editor_stack[STACK_SIZE];
+
+    editor_context.uc_stack.ss_sp = editor_stack;
+    editor_context.uc_stack.ss_size = STACK_SIZE;
+    editor_context.uc_stack.ss_flags = 0;
+    editor_context.uc_link = &MAIN_CONTEXT;
+
+    // Trampoline for the editor_context is created (argument passing?)
+    makecontext(&editor_context, _aux_editorStart, 0, 0);
+
+    swapcontext(&MAIN_CONTEXT, &editor_context);
+    */
+
     return 0;
+
 }
 
 

@@ -32,6 +32,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <stddef.h>
+#include <sys/ucontext.h>
+#include <ucontext.h>
 #define KILO_VERSION "0.0.1"
 
 #ifdef __linux__
@@ -56,7 +59,10 @@
 
 
 //My headers
-#include "../fs/file.h"
+#include "editor.h"
+extern DISK_STRUCT* DISK;
+extern FAT_STRUCT* FAT;
+extern FolderHandle* CWD;
 //TODO: replace r/w functions with my _FILE_readFileContent and _FILE_writeFileContent
 
 
@@ -798,10 +804,46 @@ void editorDelChar() {
     E.dirty++;
 }
 
+
+
+
+// My getline auxiliary function to read from char*
+// TODO: FIX THIS è rottissima
+// TODO: !!!! strlen non considera il carattere di terminazione \0 !!!!
+int aux_getline(char** lineptr, char** position_ptr){
+
+    ssize_t line_len = 0;
+    *lineptr = malloc(1024);
+    int reall = 1;
+
+    for (int i=0; i<strlen(*position_ptr)+1; ++i){
+        char c = *position_ptr[i];
+        if (line_len != 0 && line_len%1024 == 0) *lineptr = realloc(*lineptr, 1024*(++reall));
+        if (c != '\n' && c != '\r' && c != '\0'){
+            (*lineptr)[line_len] = c;
+            (*position_ptr)++;
+            line_len++;
+        }
+        else{
+            (*lineptr)[line_len] = c;
+            (*position_ptr)++;
+            line_len++;
+            break;
+        }
+    }
+    return line_len;
+}
+
+
 /* Load the specified program in the editor memory and returns 0 on success
  * or 1 on error. */
 int editorOpen(char *filename) {
-    FILE *fp;
+
+    char* file_content = calloc(CWD->fileList[_FILE_searchFileInCWD(CWD, filename)]->size, sizeof(char));
+    if (_FILE_getFileContent(DISK, FAT, CWD, filename, file_content) == -1){
+        free(file_content);
+        return -1;
+    }
 
     E.dirty = 0;
     free(E.filename);
@@ -809,42 +851,35 @@ int editorOpen(char *filename) {
     E.filename = malloc(fnlen);
     memcpy(E.filename,filename,fnlen);
 
-    fp = fopen(filename,"r");
-    if (!fp) {
-        if (errno != ENOENT) {
-            perror("Opening file");
-            exit(1);
-        }
-        return 1;
-    }
-
-    char *line = NULL;
-    size_t linecap = 0;
+    char* position_ptr = file_content;
+    char* line = NULL;
+    //size_t linecap = 0;
     ssize_t linelen;
-    while((linelen = getline(&line,&linecap,fp)) != -1) {
+
+    while((linelen = aux_getline(&line,&position_ptr)) > 0) {
+        printf("DEBUG: sei qui\n");
         if (linelen && (line[linelen-1] == '\n' || line[linelen-1] == '\r'))
             line[--linelen] = '\0';
         editorInsertRow(E.numrows,line,linelen);
+        free(line); // needed?
     }
     free(line);
-    fclose(fp);
+
+    free(file_content);
+
     E.dirty = 0;
     return 0;
 }
+
+
 
 /* Save the current file on disk. Return 0 on success, 1 on error. */
 int editorSave(void) {
     int len;
     char *buf = editorRowsToString(&len);
-    int fd = open(E.filename,O_RDWR|O_CREAT,0644);
-    if (fd == -1) goto writeerr;
 
-    /* Use truncate + a single write(2) call in order to make saving
-     * a bit safer, under the limits of what we can do in a small editor. */
-    if (ftruncate(fd,len) == -1) goto writeerr;
-    if (write(fd,buf,len) != len) goto writeerr;
+    if (_FILE_writeFileContent(DISK, FAT, CWD, E.filename, buf, len) == -1) goto writeerr;
 
-    close(fd);
     free(buf);
     E.dirty = 0;
     editorSetStatusMessage("%d bytes written on disk", len);
@@ -852,8 +887,7 @@ int editorSave(void) {
 
 writeerr:
     free(buf);
-    if (fd != -1) close(fd);
-    editorSetStatusMessage("Can't save! I/O error: %s",strerror(errno));
+    editorSetStatusMessage("Can't save! I/O error");
     return 1;
 }
 
@@ -900,7 +934,7 @@ void editorRefreshScreen(void) {
             if (E.numrows == 0 && y == E.screenrows/3) {
                 char welcome[80];
                 int welcomelen = snprintf(welcome,sizeof(welcome),
-                    "Kilo editor -- verison %s\x1b[0K\r\n", KILO_VERSION);
+                    "Kilo editor -- version %s\x1b[0K\r\n", KILO_VERSION);
                 int padding = (E.screencols-welcomelen)/2;
                 if (padding) {
                     abAppend(&ab,"~",1);
@@ -1294,15 +1328,14 @@ void initEditor(void) {
     signal(SIGWINCH, handleSigWinCh);
 }
 
-int main(int argc, char **argv) {
-    if (argc != 2) {
-        fprintf(stderr,"Usage: kilo <filename>\n");
-        exit(1);
-    }
+
+
+
+int _EDITOR_start(char* filename, ucontext_t main_context) {
 
     initEditor();
-    editorSelectSyntaxHighlight(argv[1]);
-    editorOpen(argv[1]);
+    editorSelectSyntaxHighlight(filename);
+    editorOpen(filename);
     enableRawMode(STDIN_FILENO);
     editorSetStatusMessage(
         "HELP: Ctrl-S = save | Ctrl-Q = quit | Ctrl-F = find");
@@ -1310,5 +1343,10 @@ int main(int argc, char **argv) {
         editorRefreshScreen();
         editorProcessKeypress(STDIN_FILENO);
     }
+
+    // Going back to the main context
+    setcontext(&main_context);
+
     return 0;
 }
+
