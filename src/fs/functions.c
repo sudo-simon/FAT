@@ -46,8 +46,8 @@ int _FS_read(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char* file_n
 }
 
 
-int _FS_seek(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char* file_name, char* found_paths[]){
-    //TODO: SEEK!!!
+int _FS_seek(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char* name, char** found_paths){
+    return _FILE_findPathsTo(DISK, FAT, CWD, name, found_paths);
 }
 
 

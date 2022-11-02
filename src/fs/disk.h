@@ -5,12 +5,12 @@
 /*
 DISK buffer struct.
 char* disk,
-char mmappedFlag,
+char persistentFlag,
 int sessionFd
 */
 typedef struct DISK_STRUCT {
     char disk[DISK_SIZE];
-    char mmappedFlag;
+    char persistentFlag;
     char sessionFileName[64];
 } DISK_STRUCT;
 

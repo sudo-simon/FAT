@@ -220,4 +220,10 @@ Writes n_bytes of the content of src_buffer to the file specified with file_name
 int _FILE_writeFileContent(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char* file_name, char* src_buffer, int n_bytes);
 
 
+/*
+
+*/
+int _FILE_findPathsTo(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char* name, char** found_paths);
+
+
 

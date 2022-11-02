@@ -54,10 +54,10 @@ int main(int argc, char** argv){
 
     // FAT initialization
     FAT = calloc(1,sizeof(FAT_STRUCT));
-    int root_block_index = _FAT_init(FAT, DISK, DISK->mmappedFlag);
+    _FAT_init(FAT, DISK, DISK->persistentFlag);
 
     // CWD initialization
-    if (! DISK->mmappedFlag)
+    if (! DISK->persistentFlag)
         CWD = _FILE_initRoot(DISK, FAT);
     else
         CWD = _FILE_getRoot(DISK, FAT);
@@ -81,13 +81,13 @@ int main(int argc, char** argv){
     split_input[1] = malloc(MAX_INPUT_LEN*sizeof(char));
     int n_args;
     short cmd_index;
-    int cmd_ret_value;
+    //int cmd_ret_value; // UNUSED
 
     shell_init();
 
 
     /*/DEBUG CODE
-    printf("diskmmappedFlag = %d\n",DISK->mmappedFlag);
+    printf("diskpersistentFlag = %d\n",DISK->persistentFlag);
     printf("sessionFileName = %s\n",DISK->sessionFileName);
     printf("CWD->numFiles = %d\n",CWD->numFiles);
     printf("CWD->firstBlockIndex = %d\n",CWD->firstBlockIndex);
@@ -137,9 +137,9 @@ int main(int argc, char** argv){
 
                     // DEBUG CODE
                     /*printf(
-                        "DEBUG:\nDISK->disk = %ld \nDISK->mmappedFlag = %d \nDISK->sessionFd = %d\n\n",
+                        "DEBUG:\nDISK->disk = %ld \nDISK->persistentFlag = %d \nDISK->sessionFd = %d\n\n",
                         DISK->disk,
-                        DISK->mmappedFlag,
+                        DISK->persistentFlag,
                         DISK->sessionFd
                     );*/
 
@@ -159,7 +159,7 @@ int main(int argc, char** argv){
             }
 
             // Effective command call from function pointers array 
-            cmd_ret_value = (*FN_ARRAY[cmd_index])((void*)split_input[1]);
+            (*FN_ARRAY[cmd_index])((void*)split_input[1]);
         
         }
         // Invalid command

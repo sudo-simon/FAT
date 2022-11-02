@@ -50,6 +50,12 @@ int _mk(void *arg){
         return -1;
     }
 
+    // Input validation for a file name
+    if (! _AUX_validateInput(new_filename)){
+        printf("[ERROR] Forbidden characters in file name ('/' ',' '\\')\n");
+        return -1;
+    }
+
     if(_FS_createFile(DISK, FAT, CWD, new_filename) == -1){
         printf("[ERROR] Unable to create the file %s\n",new_filename);
         return -1;
@@ -118,7 +124,17 @@ int _find(void *arg){
         return -1;
     }
 
-    char* found_paths[1024];
+    // Input validation for a name
+    if (! _AUX_validateInput(name)){
+        printf("[ERROR] Forbidden characters in name to search ('/' ',' '\\')\n");
+        return -1;
+    }
+
+
+
+    // Max 100 results returned
+    char** found_paths = calloc(100, sizeof(char*));
+
     int found = _FS_seek(DISK, FAT, CWD, name, found_paths);
     if (found == 0){
         printf("%s not found\n",name);
@@ -130,8 +146,11 @@ int _find(void *arg){
     }
     else{
         printf("[ERROR] Search of %s is not possible\n",name);
-        return -1;
     }
+
+    for (int i=0; i<found; ++i)
+        free(found_paths[i]);
+    free(found_paths);
 
     return 0;
 }
@@ -145,6 +164,18 @@ int _mkdir(void *arg){
     }
     else if (strlen(new_foldername) > MAX_FILENAME_LEN){
         printf("Folder name too long! It can be a maximum of %d characters long\n",MAX_FILENAME_LEN);
+        return -1;
+    }
+
+    // Doesn't break anything, just ugly
+    if (strcmp(new_foldername, "root") == 0){
+        printf("You can't name a folder \"root\"\n");
+        return -1;
+    }
+
+    // Input validation for a folder name
+    if (! _AUX_validateInput(new_foldername)){
+        printf("[ERROR] Forbidden characters in folder name ('/' ',' '\\')\n");
         return -1;
     }
 
@@ -217,11 +248,17 @@ int _edit(void *arg){
 
 int _save(void* arg){
     if (strlen((char*)arg) > 0){
-        printf("Save doesn't take any arguments\n");
+        printf("save doesn't take any arguments\n");
         return -1;
     }
 
-    if (DISK->mmappedFlag){
+    // Writing FAT in the first 70 blocks of DISK
+    if (_FAT_writeOnDisk(FAT, DISK) == -1){
+        printf("[ERROR] Unable to save FAT on DISK\n");
+        return -1;
+    }
+
+    if (DISK->persistentFlag){
         FILE* f = fopen(DISK->sessionFileName, "w");
         if (fwrite(DISK->disk, 1, DISK_SIZE, f) == 0){
             printf("[ERROR] Unable to save DISK file locally\n");
@@ -246,12 +283,12 @@ int _save(void* arg){
 
         // Input validation for a file name
         if (! _AUX_validateInput(session_name)){
-            printf("[ERROR] Forbidden characters in input\n");
+            printf("[ERROR] Forbidden characters in file name ('/' ',' '\\')\n");
             return -1;
         }
 
         // Adding the .FAT extension
-        strncat(session_name, ".FAT", 4);
+        strcat(session_name, ".FAT");
 
         // Checking if file already exists
         if(access(session_name, F_OK) == 0){
@@ -268,12 +305,14 @@ int _save(void* arg){
         printf("[DONE] FAT file saved successfully\n");
 
         strncpy(DISK->sessionFileName, session_name, 64);
-        DISK->mmappedFlag = 1;
+        DISK->persistentFlag = 1;
         fclose(f);
     }
     
     return 0;
 }
+
+
 
 
 //TEMPORARY FUNCTION

@@ -31,14 +31,14 @@ int _DISK_init(DISK_STRUCT* DISK, char* session_filename){
         }
         fclose(f);
 
-        DISK->mmappedFlag = 1;
+        DISK->persistentFlag = 1;
     }
 
     // DISK to be created from scratch
     else{
         memset(DISK->disk, 0, DISK_SIZE);
         strncpy(DISK->sessionFileName, "", 64);
-        DISK->mmappedFlag = 0;
+        DISK->persistentFlag = 0;
     }
 
     return 0;
@@ -46,7 +46,8 @@ int _DISK_init(DISK_STRUCT* DISK, char* session_filename){
 
 
 int _DISK_destroy(DISK_STRUCT* DISK){  
-    if (DISK->mmappedFlag){
+    if (DISK->persistentFlag){
+        if (_FAT_writeOnDisk(FAT, DISK) == -1) return -1;
         FILE* f =  fopen(DISK->sessionFileName, "w");
         if (fwrite(DISK->disk, 1, DISK_SIZE, f) == 0) return -1;
         fclose(f);
