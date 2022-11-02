@@ -37,8 +37,8 @@ The DISK can contain up to 3.5 MiB (3670016 bytes) of data (a reference to the [
 Even if the DISK buffer is a contiguous region of memory, it gets subdivided in blocks, each 512 bytes big, thanks to the FAT filesystem access method.
 
 The FAT itself occupies the first 70 blocks of the disk, and it is a table consisting of two values per entry:
-    1- char isFull: a flag that is set to 1 if the block contains valid data or 0 otherwise
-    2- int next: the index of the next block of the file on disk or -1 if there is no next block
+- 1 char isFull: a flag that is set to 1 if the block contains valid data or 0 otherwise
+- 2 int next: the index of the next block of the file on disk or -1 if there is no next block
 
 Files and folders created are saved on disk respectively with [FileObject structs and FolderObject structs](./src/fs/file.h) that are the same size of a memory block, and contain bookkeeping data and the first chunk of user data. Each successive data block consists of 512 bytes of char, in the case of files, or 512 bytes of int (128 ints) in the case of folders.
 
