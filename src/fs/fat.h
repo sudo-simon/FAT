@@ -66,3 +66,9 @@ int _FAT_allocateBlock(FAT_STRUCT* FAT, int block_index);
 Sets the value isFull of the corresponding block to 0
 */
 void _FAT_deallocateBlock(FAT_STRUCT* FAT, int block_index);
+
+
+/*
+Saves the current FAT struct in memory on DISK
+*/
+int _FAT_writeOnDisk(FAT_STRUCT* FAT, DISK_STRUCT* DISK);

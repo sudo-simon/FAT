@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 // My headers
+#include "disk.h"
 #include "fat.h"
 
 
@@ -78,4 +79,10 @@ void _FAT_deallocateBlock(FAT_STRUCT* FAT, int block_index){
     FAT->isFull[block_index] = 0;
     FAT->next[block_index] = -1;
     return;
+}
+
+
+int _FAT_writeOnDisk(FAT_STRUCT* FAT, DISK_STRUCT* DISK){
+    if (_DISK_writeBytes(DISK, 0, (char*) FAT, FAT_SIZE) == -1) return -1;
+    return 0;
 }

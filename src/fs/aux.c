@@ -6,9 +6,7 @@
 
 /* ----------------------------------------------- Sorting algorithms ------------------------------------------------- */
 
-// Merges two subarrays of arr[].
-// First subarray is arr[l..m]
-// Second subarray is arr[m+1..r]
+
 void blockMerge(int* arr, int left, int mid, int right){
     int i, j, k;
     int n1 = mid - left + 1;
@@ -29,7 +27,7 @@ void blockMerge(int* arr, int left, int mid, int right){
     j = 0; // Initial index of second subarray
     k = left; // Initial index of merged subarray
     while (i < n1 && j < n2) {
-        if (L[i] > R[j]) {     //? Swapped the condition to make it sort in descending order (-1 index avoidance)
+        if (L[i] > R[j]) {     // Swapped the condition to make it sort in descending order (-1 index avoidance)
             arr[k] = L[i];
             i++;
         }
@@ -57,8 +55,7 @@ void blockMerge(int* arr, int left, int mid, int right){
     }
 }
  
-/* l is for left index and r is right index of the
-sub-array of arr to be sorted */
+
 void blockMergeSort(int arr[], int left, int right){
     if (left < right) {
         // Same as (l+r)/2, but avoids overflow for
@@ -123,8 +120,7 @@ void FolderListElemMerge(FolderListElem** arr, int left, int mid, int right){
     }
 }
  
-/* l is for left index and r is right index of the
-sub-array of arr to be sorted */
+
 void FolderListElemMergeSort(FolderListElem** arr, int left, int right){
     if (left < right) {
         // Same as (l+r)/2, but avoids overflow for
@@ -166,12 +162,13 @@ int _AUX_intBinarySearch(int* list, int list_len, int to_find){
     return -1;
 }
 
-int _AUX_fileBinarySearch(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char* file_name);
+//int _AUX_fileBinarySearch(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char* file_name);
 
-int _AUX_folderBinarySearch(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char* folder_name);
+//int _AUX_folderBinarySearch(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char* folder_name);
 
 int _AUX_validateInput(char* input_str){
-    char no[] = "\\.,/";
+    // Forbidden characters for file and folder names
+    char no[] = "/,\\";
     for (int i=0; i<strlen(input_str); ++i){
         for (int j=0; j<strlen(no); ++j){
             if (input_str[i] == no[j]) return 0;

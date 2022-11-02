@@ -33,7 +33,7 @@ FolderHandle* _FILE_initRoot(DISK_STRUCT* DISK, FAT_STRUCT* FAT){
     root->numFolders = 0;
     root->numFiles = 0;
     root->previousFolderBlockIndex = -1;
-    for (int i=0; i<(sizeof(root->contentListBlocks)/4); ++i){
+    for (int i=0; i<CONTENT_LIST_BLOCKS_SIZE; ++i){
         root->contentListBlocks[i] = -1;
     }
 
@@ -63,7 +63,15 @@ FolderHandle* _FILE_getRoot(DISK_STRUCT* DISK, FAT_STRUCT* FAT){
     
     strncpy(root_handle->folderName, root->folderName, MAX_FILENAME_LEN);
     root_handle->firstBlockIndex = FAT_RESERVED_BLOCKS;
-    root_handle->currentBlockIndex = FAT_RESERVED_BLOCKS;   //TODO: bugfixing (current_index may be different)
+
+    int b_index = FAT_RESERVED_BLOCKS;
+    int next_index = _FAT_getNextBlock(FAT, b_index);
+    while (b_index != -1){
+        root_handle->currentBlockIndex = b_index;
+        b_index = next_index;
+        next_index = _FAT_getNextBlock(FAT, b_index);
+    }
+
     root_handle->size = root->size;
     root_handle->previousFolderBlockIndex = root->previousFolderBlockIndex;
     root_handle->numFolders = root->numFolders;
@@ -863,7 +871,7 @@ int _FILE_changeWorkingDirectory(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandl
     while (b_index != -1){
         CWD->currentBlockIndex = b_index;
         b_index = next_index;
-        next_index = _FAT_getNextBlock(FAT, next_index);
+        next_index = _FAT_getNextBlock(FAT, b_index);
     }
 
     CWD->size = new_CWD->size;
@@ -954,8 +962,6 @@ int _FILE_writeFileContent(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD
 
     strncpy(file->firstDataBlock, src_buffer, FIRST_DATA_BLOCK_SIZE);
     for (int i=0; i<extra_blocks_to_write; ++i){
-
-        char* file_block;
         
         // I have to allocate a new block for the file
         if (next_index == -1){
@@ -1016,5 +1022,130 @@ int _FILE_writeFileContent(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD
 
     free(file);
     return 0;
+
+}
+
+
+
+
+
+
+
+
+
+
+void _FILE_recursiveNameSearch(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* current_dir, char* name, char* found_paths[1024], int* found, char* current_path, int chars_to_delete){
+
+    // Max number of results reached
+    if (*found >= 100) return;
+
+
+    // I look for "name" in the current_dir
+
+    int file_cwd_index = _FILE_searchFileInCWD(current_dir, name);
+    if (file_cwd_index != -1){
+        char* found_name = current_dir->fileList[file_cwd_index]->name;
+        found_paths[*found] = calloc(strlen(current_path)+strlen(found_name), sizeof(char));
+
+        strcpy(found_paths[*found], current_path);
+        //strncpy(found_paths[*found], current_path, strlen(current_path));
+        strcat(found_paths[*found], found_name);
+        //strncpy(found_paths[*found]+strlen(found_paths[*found]), found_name, strlen(found_name));
+
+        (*found)++;
+    }
+
+    // Repeated check after a possible allocation of found_paths
+    if (*found >= 100) return;
+
+    int folder_cwd_index = _FILE_searchFolderInCWD(current_dir, name);
+    if (folder_cwd_index != -1){
+        char* found_name = current_dir->folderList[folder_cwd_index]->name;
+        found_paths[*found] = calloc(strlen(current_path)+strlen(found_name), sizeof(char));
+
+        strcpy(found_paths[*found], current_path);
+        //strncpy(found_paths[*found], current_path, strlen(current_path));
+        strcat(found_paths[*found], found_name);
+        //strncpy(found_paths[*found]+strlen(found_paths[*found]), found_name, strlen(found_name));
+        strcat(found_paths[*found], "/");
+        //strncpy(found_paths[*found]+strlen(found_paths[*found]), "/",2);
+
+        (*found)++;
+    }
+
+
+    // Recursive path is over
+    if (current_dir->numFolders == 0){
+        
+        //Cancello chars_to_delete da current_path (la profondità a cui sono arrivato)
+        char s[strlen(current_path)-chars_to_delete];
+        strncpy(s, current_path, strlen(current_path)-chars_to_delete);
+        strcpy(current_path, s);
+
+        return;
+    }
+
+
+    // Recursive steps
+    for (int i=0; i<current_dir->numFolders; ++i){
+
+        FolderObject* next_dir_obj = (FolderObject*) _DISK_readBytes(
+            DISK, 
+            current_dir->folderList[i]->firstBlockIndex, 
+            sizeof(struct FolderObject)
+        );
+
+        // Path too long, folder ignored
+        if ((strlen(current_path)+strlen(next_dir_obj->folderName)+1) > 1024){
+            free(next_dir_obj);
+            continue;
+        }
+
+
+
+        FolderHandle* next_dir_handle = calloc(1,sizeof(struct FolderHandle));
+        strncpy(next_dir_handle->folderName, next_dir_obj->folderName, MAX_FILENAME_LEN);
+        next_dir_handle->numFiles = next_dir_obj->numFiles;
+        next_dir_handle->fileList = _FILE_getContainedFiles(DISK, FAT, next_dir_obj);
+        next_dir_handle->numFolders = next_dir_obj->numFolders;
+        next_dir_handle->folderList = _FILE_getContainedFolders(DISK, FAT, next_dir_obj);
+
+        free(next_dir_obj);
+
+        strcat(current_path, next_dir_handle->folderName);
+        strcat(current_path, "/");
+        //strcpy(current_path+strlen(current_path), next_dir_handle->folderName);
+        //strcpy(current_path+strlen(current_path), "/");
+
+        // Actual recursive call
+        _FILE_recursiveNameSearch(
+            DISK, 
+            FAT, 
+            next_dir_handle, 
+            name, 
+            found_paths, 
+            found, 
+            current_path,
+            (chars_to_delete + strlen(next_dir_handle->folderName) +1)
+        );        
+
+        free(next_dir_handle);
+
+    }
+
+}
+
+
+int _FILE_findPathsTo(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char* name, char** found_paths){
+
+    char current_path[1024];
+    strcpy(current_path, CWD->folderName);
+    strcat(current_path, "/");
+
+    int found = 0;
+    
+    _FILE_recursiveNameSearch(DISK, FAT, CWD, name, found_paths, &found, current_path, 0);
+
+    return found;
 
 }
