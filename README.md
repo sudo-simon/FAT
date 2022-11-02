@@ -389,9 +389,9 @@ int _FILE_deleteFolder(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, ch
     if (folder_object->size > 0){
 
         if (! recursive_flag){
-            int ans;
+            char ans;
             printf("The folder contains other files and folders.\nDo you want to recursively remove them all? [y/n]: ");
-            ans = fgetc(stdin);
+            scanf("%c",&ans);
             if (ans == 'n' || ans == 'N'){
                 free(folder_object);
                 return 0;
