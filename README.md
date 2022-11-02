@@ -81,7 +81,9 @@ The program can be executed both from src/fat.bin binary or from the [./FAT](./F
 
 ## Commands explanation
 
-- **mk**: creates a new FileObject struct and initializes it with the correct values, and the input \<name\> as its fileName value.
+### mk
+
+It creates a new FileObject struct and initializes it with the correct values, and the input \<name\> as its fileName value.
 
 The FAT gets then updated with the new file block, that is the first free one available, the file gets inserted in the directory tree as a content of the CWD and the created FileObject is saved on DISK.
 
@@ -111,7 +113,9 @@ int _FILE_createFile(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char
 }
 ```
 
-- **rm**: searches for a matching file name in the CWD, and if successful deletes all FAT entries for said file, but does not erase file blocks (to emulate real life FAT filesystems behaviour).
+### rm
+
+It searches for a matching file name in the CWD, and if successful deletes all FAT entries for said file, but does not erase file blocks (to emulate real life FAT filesystems behaviour).
 
 The name search in the CWD takes O(log(n)) time because FolderListElem entries are kept in alphabetical order with a merge sort algorithm and then searched with a binary search one.
 
@@ -163,7 +167,9 @@ int _FILE_deleteFile(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char
 }
 ```
 
-- **cat**: reads the file contents starting from the first chunk contained in the FileObject struct, and then continues to read successive blocks of bytes until the last block is read.
+### cat
+
+It reads the file contents starting from the first chunk contained in the FileObject struct, and then continues to read successive blocks of bytes until the last block is read.
 
 ```c
 int _FILE_getFileContent(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char* file_name, char* dest_buffer){
@@ -203,7 +209,9 @@ int _FILE_getFileContent(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, 
 }
 ```
 
-- **find**: it uses a recursive function to search a file or a folder with the input \<name\> starting from the CWD, and returns all the found paths to these files and folders in a string pointer passed as a parameter.
+### find
+
+It uses a recursive function to search a file or a folder with the input \<name\> starting from the CWD, and returns all the found paths to these files and folders in a string pointer passed as a parameter.
 
 It takes O(n*log(n)) time as a binary search is performed on every subfolder visited, and all n subfolders get visited. It is a form of depth-first search on the directory tree.
 
@@ -312,7 +320,9 @@ int _FILE_findPathsTo(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, cha
 }
 ```
 
-- **mkdir**: creates a new FolderObject struct and initializes it with the correct values, and the input \<name\> as its folderName value.
+### mkdir
+
+It creates a new FolderObject struct and initializes it with the correct values, and the input \<name\> as its folderName value.
 
 The FAT gets then updated with the new folder block, that is the first free one available, the folder gets inserted in the directory tree as a content of the CWD and the created FolderObject is saved on DISK.
 
@@ -347,7 +357,9 @@ int _FILE_createFolder(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, ch
 }
 ```
 
-- **rmdir**: searches for a matching folder name in the CWD, and if successful deletes all FAT entries for said folder, but does not erase file blocks (to emulate real life FAT filesystems behaviour).
+### rmdir
+
+It searches for a matching folder name in the CWD, and if successful deletes all FAT entries for said folder, but does not erase file blocks (to emulate real life FAT filesystems behaviour).
 
 If the folder is not empty, the user is prompted with a request to delete all contained files and folders recursively.
 
@@ -426,7 +438,9 @@ int _FILE_deleteFolder(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, ch
 }
 ```
 
-- **cd**: changes all the fields of the CWD FolderHandle struct in memory to match the contents of the folder passed as input.
+### cd
+
+It changes all the fields of the CWD FolderHandle struct in memory to match the contents of the folder passed as input.
 
 ```c
 int _FILE_changeWorkingDirectory(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD, char* new_WD_name){
@@ -488,7 +502,9 @@ int _FILE_changeWorkingDirectory(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandl
 }
 ```
 
-- **ls**: lists all contents of CWD to stdout, together with the total number of contents present and the size of each one, bytes in the case of files and contents in the case of folders.
+### ls
+
+It lists all contents of CWD to stdout, together with the total number of contents present and the size of each one, bytes in the case of files and contents in the case of folders.
 
 The DISK is never used for this operation as the CWD struct kept in memory keeps track of its contents and their sizes.
 
