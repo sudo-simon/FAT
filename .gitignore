@@ -54,3 +54,4 @@ dkms.conf
 # My stuff
 test/
 *.dump
+*.FAT
