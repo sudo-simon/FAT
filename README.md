@@ -44,7 +44,7 @@ Files' data field is a char buffer, while folders' data field is an array of int
 
 The user operates on their CWD (current working directory) using a FolderHandle struct in memory that gets updated every time the CWD changes, and stores basic data of the contained files and folders in two separate lists of FolderListElem struct to "speed up" some operations (reading from disk is equivalent to read from memory in our case).
 
-For more in depth explanations of how the single commands work, see the [commands explanation](#commands-explanation) section.
+For more in depth explanations of how the single commands work, see the [commands details](#commands-details) section.
 
 
 ## How to use
@@ -79,7 +79,7 @@ The program can be executed both from src/fat.bin binary or from the [./FAT](./F
 - [x] **save**: saves the current FAT session to a file
 
 
-## Commands explanation
+## Commands details
 
 ### mk
 
