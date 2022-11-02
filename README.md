@@ -251,7 +251,7 @@ void _FILE_recursiveNameSearch(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle*
     // Recursive path is over
     if (current_dir->numFolders == 0){
         
-        //Cancello chars_to_delete da current_path (la profondità a cui sono arrivato)
+        //Deleting chars_to_delete from current_path (removing this branch depth)
         char s[strlen(current_path)-chars_to_delete];
         strncpy(s, current_path, strlen(current_path)-chars_to_delete);
         strcpy(current_path, s);
