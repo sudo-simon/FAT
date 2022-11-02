@@ -74,9 +74,9 @@ The program can be executed both from src/fat.bin binary or from the [./FAT](./F
 - [x] **rmdir \<dir\>**: deletes the directory passed as argument
 - [x] **cd \<dir\>**: changes the current working directory
 - [x] **ls**: lists the content of the current working directory
-- [ ] **edit \<file\>**: allows to edit the file passed as argument with [Kilo](https://github.com/antirez/kilo) text editor
 - [x] **write \<file\>**: allows to write the new content of the file from scratch (**will be changed with edit**)
 - [x] **save**: saves the current FAT session to a file
+- [ ] **edit \<file\>**: allows to edit the file passed as argument with [Kilo](https://github.com/antirez/kilo) text editor
 
 
 ## Commands details
