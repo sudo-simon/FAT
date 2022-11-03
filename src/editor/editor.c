@@ -857,11 +857,12 @@ int editorOpen(char *filename) {
     ssize_t linelen;
 
     while((linelen = aux_getline(&line,&position_ptr)) > 0) {
-        printf("DEBUG: sei qui\n");
+        
         if (linelen && (line[linelen-1] == '\n' || line[linelen-1] == '\r'))
             line[--linelen] = '\0';
         editorInsertRow(E.numrows,line,linelen);
         free(line); // needed?
+        
     }
     free(line);
 
