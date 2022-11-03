@@ -13,13 +13,13 @@
 #include "../fs/disk.h"
 #include "../fs/fat.h"
 #include "../fs/file.h"
-#include "../editor/editor.c"
+//#include "../editor/editor.h"
 
-// Global variables used for context switching
+/*/ Global variables used for context switching
 #define STACK_SIZE 65536    // 64KiB stack for the context switch to the editor
 char* EDITOR_FILENAME;      // Filename passed to the kilo editor
 ucontext_t MAIN_CONTEXT;    // main context use for context switching
-
+*/
 
 extern DISK_STRUCT* DISK;
 extern FAT_STRUCT* FAT;
@@ -244,10 +244,11 @@ int _ls(void *arg){
 }
 
 
-// Auxiliary function for ucontext switching
+/*/ Auxiliary function for ucontext switching
 void _aux_editorStart(void){
     _EDITOR_start(EDITOR_FILENAME, MAIN_CONTEXT);
 }
+*/
 
 int _edit(void *arg){
     //TODO: implementare Kilo
