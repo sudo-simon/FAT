@@ -10,7 +10,7 @@
 #include "fs/fat.h"
 #include "fs/file.h"
 
-char DEBUG_FLAG = 0;
+//char DEBUG_FLAG = 0;
 
 // DISK struct
 DISK_STRUCT* DISK;
@@ -23,6 +23,9 @@ FolderHandle* CWD;
 
 // FileHandle of the currently opened file
 FileHandle* O_FILE;
+
+// Flag to check if an editor is open
+char EDITOR_OPEN = 0;
 
 
 int main(int argc, char** argv){
@@ -157,6 +160,11 @@ int main(int argc, char** argv){
                     printf("quit doesn't take any arguments\n");
                     continue;
                 }
+            }
+
+            if (EDITOR_OPEN){
+                printf("Close the editor before performing any other operation\n");
+                continue;
             }
 
             // Effective command call from function pointers array 

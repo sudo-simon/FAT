@@ -3,8 +3,8 @@ CCOPTS = -Wall -std=gnu99 -g
 AR = ar
 
 BINS = fat.bin
-OBJS = ./cli/shell.o ./cli/commands.o ./fs/aux.o ./fs/disk.o ./fs/fat.o ./fs/file.o ./fs/functions.o
-HEADERS = constants.h ./cli/shell.h ./cli/commands.h ./fs/aux.h ./fs/disk.h ./fs/fat.h ./fs/file.h ./fs/functions.h
+OBJS = ./cli/shell.o ./cli/commands.o ./fs/aux.o ./fs/disk.o ./fs/fat.o ./fs/file.o ./fs/functions.o ./editor/kilo.o
+HEADERS = constants.h ./cli/shell.h ./cli/commands.h ./fs/aux.h ./fs/disk.h ./fs/fat.h ./fs/file.h ./fs/functions.h ./editor/kilo.h
 LIBS = libFAT.a
 
 %.o: %.c $(HEADERS)
@@ -23,7 +23,9 @@ libFAT.a: $(OBJS)
 
 
 fat.bin: main.c $(OBJS)
-	$(CC) $(CCOPTS) -O3 $^ -lreadline -o $@
+	$(CC) $(CCOPTS) -O3 $^ -lreadline -pthread -o $@
+
+
 
 
 clean:

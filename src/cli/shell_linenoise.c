@@ -2,26 +2,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-// Readline library (libreadline-dev) 
-#include <readline/readline.h>
-#include <readline/history.h>
+
+// Linenoise library 
+#include "../libs/linenoise/linenoise.h"
+
 // My headers
 #include "../constants.h"
-//#include "commands.h"
-#include "shell.h"
+#include "shell_linenoise.h"
 
 extern char* USER;
-
-int shell_init(){   
-
-    char* time = current_time_str();
-    clear_all();
-    printf("---------- FAT - Fake Awesome Terminal ----------\n\n");
-    printf("%s\n",time);
-    free(time);
-    return 0;
-
-}
 
 
 char* current_time_str(){
@@ -84,32 +73,8 @@ char* current_time_str(){
 }
 
 
-int take_input(char *input_buf, char* input_msg){
 
-    char* buf;
-    buf = readline(input_msg);
-    int input_length = strlen(buf);
-    if (input_length > 0){
-        add_history(buf);
-        strncpy(input_buf, buf, MAX_INPUT_LEN);
-        free(buf);
-        return 0;
-    }
-    else if (input_length > MAX_INPUT_LEN){
-        printf("[ERROR] Input can be a maximum of %d characters long\n",MAX_INPUT_LEN);
-        free(buf);
-        return 1;
-    }
-    else{
-        free(buf);
-        return -1;
-    }
-
-}
-
-
-
-int str_split(char *in, char** out){
+int str_split(char* in, char** out){
 
     int n_str = 0;
     char* token = strtok(in, " ");
@@ -127,49 +92,21 @@ int str_split(char *in, char** out){
 
 
 
+int _SHELL_init(){
 
-
-/* OLD FUNCTION
-int str_split(char *in, char** out){
-
-    int n = 0, current_word_index = 0;
-    char c = '\0', prev_c = '\0';
-    //boolean used to check if quotes are being used to define a single word
-    char in_quotes = 0;
-
-    for(int i=0; i<strlen(in); ++i){
-        if (n < 2){
-            c = in[i];
-            if (c == '\'' || c == '\"'){
-                //bitwise xor to swap between 0 and 1
-                in_quotes = in_quotes^0x1;
-                continue;
-            }
-            if(in_quotes)
-                out[n][current_word_index++] = c;
-            else{
-                if (c != ' '){
-                    out[n][current_word_index++] = c;
-                }
-                else{
-                    if (prev_c != ' '){
-                        ++n;
-                        current_word_index = 0;
-                    }
-                }
-            }
-            prev_c = c;
-        }
-        else break;
-    }
-    if(in_quotes){
-        printf("Error: bad command formatting, odd number of quotes\n");
-        return -1;
-    }
-    return n;
+    char* time = current_time_str();
+    clear_all();
+    printf("---------- FAT - Fake Awesome Terminal ----------\n\n");
+    printf("%s\n",time);
+    free(time);
+    return 0;
 
 }
-*/
 
 
 
+int _SHELL_takeInput(char* input_buf, char* input_msg){
+
+    //TODO: linenoise implementation
+
+}
