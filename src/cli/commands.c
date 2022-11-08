@@ -22,13 +22,25 @@ extern char EDITOR_OPEN;
 
 
 int _help(void *arg){
+    if (strlen((char*)arg) > 0)
+        printf("(help doesn't take any arguments)\n");
     char help_msg[] = (
         "FAT commands:\n"
         "   quit: exits FAT\n"
+        "   clear: clears the terminal\n"
         "   echo: prints argument to stdout\n"
-        "   \n"
+        "   mk: creates a file\n"
+        "   rm: deletes a file\n"
+        "   cat: reads the content of a file and prints it to stdout\n"
+        "   find: searches for a file or a folder with the name passed as argument\n"
+        "   mkdir: creates a directory\n"
+        "   rmdir: deletes a directory (and eventually its content)\n"
+        "   cd: changes the current working directory\n"
+        "   ls: lists the current directory content\n"
+        "   edit: opens the Kilo text editor to edit the file passed as argument\n"
+        "   save: saves the current FAT session on a permanent file on disk\n"
     );
-    printf("%s\n",help_msg);
+    printf("%s",help_msg);
     return 0;
 }
 

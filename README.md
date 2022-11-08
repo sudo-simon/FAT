@@ -49,17 +49,9 @@ For more in depth explanations of how the single commands work, see the [command
 
 ## How to use
 
-The readline library is needed for the program to work:
+Go in the src/ folder and run the `make` command to compile.
 
-```bash
-sudo apt install libreadline-dev
-```
-
-Then just go in the src/ folder and run the `make` command to compile.
-
-The program can be executed both from src/fat.bin binary or from the [./FAT](./FAT) script (recommended).
-
-**NOTE:** the readline library causes a constant amount of memory leak, it will get changed with the [linenoise](https://github.com/antirez/linenoise) library.
+The program can then be executed both from src/fat.bin binary or from the [./FAT](./FAT) script (recommended).
 
 
 ## Commands

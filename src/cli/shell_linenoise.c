@@ -110,8 +110,8 @@ void completion(const char *buf, linenoiseCompletions *lc) {
             linenoiseAddCompletion(lc,"quit");
             break;
         case 'c':
-            linenoiseAddCompletion(lc,"cat");
             linenoiseAddCompletion(lc,"cd");
+            linenoiseAddCompletion(lc,"cat");
             linenoiseAddCompletion(lc,"clear");
             break;
         case 'e':
@@ -178,10 +178,9 @@ void hint_free(void* buf){ free(buf); }
 
 void _SHELL_init(){
     linenoiseSetMultiLine(0);
-
-    //linenoiseSetCompletionCallback(completion);   // Bad behaviour
-    //linenoiseSetHintsCallback(hints);
-
+    linenoiseHistorySetMaxLen(MAX_HISTORY_LEN);
+    //linenoiseSetCompletionCallback(completion);
+    linenoiseSetHintsCallback(hints);
     linenoiseHistoryLoad("linenoise_history.txt");
 }
 
@@ -190,6 +189,8 @@ void _SHELL_takeInput(char* input_buf, char* input_msg){
 
     char* line = linenoise(input_msg);
     strncpy(input_buf, line, MAX_INPUT_LEN);
+    linenoiseHistoryAdd(line);
+    linenoiseHistorySave("linenoise_history.txt");
     free(line);
-
+    
 }

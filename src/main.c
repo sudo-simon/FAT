@@ -9,6 +9,7 @@
 #include "fs/disk.h"
 #include "fs/fat.h"
 #include "fs/file.h"
+#include "libs/linenoise/linenoise.h"
 
 //char DEBUG_FLAG = 0;
 
@@ -75,6 +76,7 @@ int main(int argc, char** argv){
     char split_input_1[MAX_INPUT_LEN];
     char* split_input[2] = { split_input_0, split_input_1 };
 
+    // Linenoise initialization and clearing of the terminal
     _SHELL_init();
     _SHELL_clear();
 
@@ -88,8 +90,10 @@ int main(int argc, char** argv){
     printf("CWD->fileList[0]->name = %s\n",CWD->fileList[0]->name);
     */
 
+
     
     // -------------------------- MAIN LOOP --------------------------
+    ////char* line;
     while(1){
 
         // Input buffers reset
@@ -98,7 +102,8 @@ int main(int argc, char** argv){
         strncpy(split_input[1], "", MAX_INPUT_LEN);
         cmd_index = -1;
 
-        sprintf(input_msg, "\n[%s] %s >>> ",getenv("USER"),CWD->folderName);
+        sprintf(input_msg, "[%s] %s >>> ",getenv("USER"),CWD->folderName);
+        printf("\n");
 
         // Linenoise input taking
         _SHELL_takeInput(input, input_msg);
@@ -162,6 +167,9 @@ int main(int argc, char** argv){
         // Invalid command
         else 
             printf("%s is not a valid command\nUse command \"help\" for a list of valid commands\n",split_input[0]);
+
+        
+        ////free(line);
 
     }
 
