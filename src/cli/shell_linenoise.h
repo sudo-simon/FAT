@@ -18,13 +18,18 @@ Buffer management and segfault prevention is done by the function caller
 int str_split(char* in, char** out);
 
 /*
-Shell initialization and welcome message, also clears the terminal
+Clears the terminal and prints welcome message
 */
-int _SHELL_init();
+void _SHELL_clear();
+
+/*
+Shell initialization
+*/
+void _SHELL_init();
 
 /*
 Takes the user input and also implements the command history
 (uses the linenoise library)
 */
-int _SHELL_takeInput(char* input_buf, char* input_msg);
+void _SHELL_takeInput(char* input_buf, char* input_msg);
 

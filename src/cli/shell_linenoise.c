@@ -16,7 +16,7 @@ extern char* USER;
 char* current_time_str(){
 
     char* str_time = malloc(32*sizeof(char));
-    struct tm* current_time = malloc(sizeof(struct tm));
+    struct tm* current_time;
     time_t t = time(NULL);
     current_time = localtime(&t);
 
@@ -91,22 +91,105 @@ int str_split(char* in, char** out){
 }
 
 
-
-int _SHELL_init(){
+void _SHELL_clear(){
 
     char* time = current_time_str();
     clear_all();
-    printf("---------- FAT - Fake Awesome Terminal ----------\n\n");
+    printf("FAT - Fake Awesome Terminal\n\n");
     printf("%s\n",time);
-    free(time);
-    return 0;
+    free(time);    
 
 }
 
 
+// ------------------------ LINENOISE IMPLEMENTATION -------------------------------------
 
-int _SHELL_takeInput(char* input_buf, char* input_msg){
+void completion(const char *buf, linenoiseCompletions *lc) {
+    switch (buf[0]) {
+        case 'q':
+            linenoiseAddCompletion(lc,"quit");
+            break;
+        case 'c':
+            linenoiseAddCompletion(lc,"cat");
+            linenoiseAddCompletion(lc,"cd");
+            linenoiseAddCompletion(lc,"clear");
+            break;
+        case 'e':
+            linenoiseAddCompletion(lc, "echo");
+            linenoiseAddCompletion(lc, "edit");
+            break;
+        case 'm':
+            linenoiseAddCompletion(lc, "mk");
+            linenoiseAddCompletion(lc, "mkdir");
+            break;
+        case 'r':
+            linenoiseAddCompletion(lc, "rm");
+            linenoiseAddCompletion(lc, "rmdir");
+            break;
+        case 'f':
+            linenoiseAddCompletion(lc, "find");
+            break;
+        case 'l':
+            linenoiseAddCompletion(lc, "ls");
+            break;
+        case 's':
+            linenoiseAddCompletion(lc, "save");
+            break;
+        case 'h':
+            linenoiseAddCompletion(lc, "help");
+            break;
+        default:
+            linenoiseAddCompletion(lc, "help");
+            break;
+    }
+}
 
-    //TODO: linenoise implementation
+char *hints(const char *buf, int *color, int *bold) {
+    if (!strcmp(buf,"q")) { *color = 32; *bold = 0; return "uit"; }
+
+    if (!strcmp(buf,"c")) { *color = 32; *bold = 0; return "d"; }
+    if (!strcmp(buf,"ca")) { *color = 32; *bold = 0; return "t"; }
+    if (!strcmp(buf,"cl")) { *color = 32; *bold = 0; return "ear"; }
+
+    if (!strcmp(buf,"e")) { *color = 32; *bold = 0; return "cho"; }
+    if (!strcmp(buf,"ed")) { *color = 32; *bold = 0; return "it"; }
+
+    if (!strcmp(buf,"m")) { *color = 32; *bold = 0; return "k"; }
+    if (!strcmp(buf,"mk")) { *color = 32; *bold = 0; return "dir"; }
+
+    if (!strcmp(buf,"r")) { *color = 32; *bold = 0; return "m"; }
+    if (!strcmp(buf,"rm")) { *color = 32; *bold = 0; return "dir"; }
+
+    if (!strcmp(buf,"f")) { *color = 32; *bold = 0; return "ind"; }
+
+    if (!strcmp(buf,"l")) { *color = 32; *bold = 0; return "s"; }
+
+    if (!strcmp(buf,"s")) { *color = 32; *bold = 0; return "ave"; }
+
+    if (!strcmp(buf,"h")) { *color = 32; *bold = 0; return "elp"; }
+
+    return NULL;
+}
+
+void hint_free(void* buf){ free(buf); }
+
+
+
+
+void _SHELL_init(){
+    linenoiseSetMultiLine(0);
+
+    //linenoiseSetCompletionCallback(completion);   // Bad behaviour
+    //linenoiseSetHintsCallback(hints);
+
+    linenoiseHistoryLoad("linenoise_history.txt");
+}
+
+
+void _SHELL_takeInput(char* input_buf, char* input_msg){
+
+    char* line = linenoise(input_msg);
+    strncpy(input_buf, line, MAX_INPUT_LEN);
+    free(line);
 
 }

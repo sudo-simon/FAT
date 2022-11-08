@@ -2,13 +2,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <termios.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 // My headers
 #include "../constants.h"
-#include "../cli/shell.h"
+#include "../cli/shell_linenoise.h"
 #include "../fs/aux.h"
 #include "../fs/functions.h"
 #include "../fs/disk.h"
@@ -22,6 +21,18 @@ extern FolderHandle* CWD;
 extern char EDITOR_OPEN;
 
 
+int _help(void *arg){
+    char help_msg[] = (
+        "FAT commands:\n"
+        "   quit: exits FAT\n"
+        "   echo: prints argument to stdout\n"
+        "   \n"
+    );
+    printf("%s\n",help_msg);
+    return 0;
+}
+
+
 int _quit(void* arg){
     printf("Exiting FAT...\n");
     exit(0);
@@ -30,7 +41,8 @@ int _quit(void* arg){
 
 
 int _clear(void* args){
-    return shell_init();
+    _SHELL_clear();
+    return 0;
 }
 
 
@@ -297,6 +309,7 @@ int _edit(void *arg){
     pid_t editor_pid = fork();
     if (editor_pid == -1){
         printf("[ERROR]: fork error!\n");
+        close(editor_pipe[1]);
         goto editor_end;
     }
 
@@ -348,7 +361,7 @@ int _edit(void *arg){
 
 editor_end:
     close(editor_pipe[0]);
-    shell_init();
+    _SHELL_clear();
     EDITOR_OPEN = 0;
     free(file_content);
     return 0;

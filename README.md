@@ -538,7 +538,7 @@ int _FS_listDir(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD){
 
 It opens the file passed as argument in the Kilo text editor: does so by forking into a subprocess that reads the needed file from it's copy of DISK, and then saves every subsequent edit on his temporary buffer.
 
-When teh user quits Kilo, the new file size and its new content get written on a pipe that was originalli passed as an argument to the _KILO_start() function.
+When the user quits Kilo, the new file size and its new content get written on a pipe that was originally passed as an argument to the _KILO_start() function.
 
 ```c
 int _edit(void *arg){
@@ -590,6 +590,7 @@ int _edit(void *arg){
     pid_t editor_pid = fork();
     if (editor_pid == -1){
         printf("[ERROR]: fork error!\n");
+        close(editor_pipe[1]);
         goto editor_end;
     }
 
