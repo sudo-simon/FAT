@@ -32,7 +32,6 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <stddef.h>
 #include <sys/ucontext.h>
 #include <ucontext.h>
 #define KILO_VERSION "0.0.1"
@@ -57,13 +56,14 @@
 #include <fcntl.h>
 #include <signal.h>
 
-
-//My headers
-#include "editor.h"
+// My header
+#include "kilo.h"
+char* FILE_CONTENT;
+int FILE_LEN;
+int write_pipe;
 extern DISK_STRUCT* DISK;
 extern FAT_STRUCT* FAT;
 extern FolderHandle* CWD;
-//TODO: replace r/w functions with my _FILE_readFileContent and _FILE_writeFileContent
 
 
 /* Syntax highlight types */
@@ -804,46 +804,10 @@ void editorDelChar() {
     E.dirty++;
 }
 
-
-
-
-// My getline auxiliary function to read from char*
-// TODO: FIX THIS è rottissima
-// TODO: !!!! strlen non considera il carattere di terminazione \0 !!!!
-int aux_getline(char** lineptr, char** position_ptr){
-
-    ssize_t line_len = 0;
-    *lineptr = malloc(1024);
-    int reall = 1;
-
-    for (int i=0; i<strlen(*position_ptr)+1; ++i){
-        char c = *position_ptr[i];
-        if (line_len != 0 && line_len%1024 == 0) *lineptr = realloc(*lineptr, 1024*(++reall));
-        if (c != '\n' && c != '\r' && c != '\0'){
-            (*lineptr)[line_len] = c;
-            (*position_ptr)++;
-            line_len++;
-        }
-        else{
-            (*lineptr)[line_len] = c;
-            (*position_ptr)++;
-            line_len++;
-            break;
-        }
-    }
-    return line_len;
-}
-
-
 /* Load the specified program in the editor memory and returns 0 on success
  * or 1 on error. */
-int editorOpen(char *filename) {
-
-    char* file_content = calloc(CWD->fileList[_FILE_searchFileInCWD(CWD, filename)]->size, sizeof(char));
-    if (_FILE_getFileContent(DISK, FAT, CWD, filename, file_content) == -1){
-        free(file_content);
-        return -1;
-    }
+int editorOpen(char* filename) {
+    FILE *fp;
 
     E.dirty = 0;
     free(E.filename);
@@ -851,45 +815,76 @@ int editorOpen(char *filename) {
     E.filename = malloc(fnlen);
     memcpy(E.filename,filename,fnlen);
 
-    char* position_ptr = file_content;
-    char* line = NULL;
-    //size_t linecap = 0;
-    ssize_t linelen;
+    // --------------------------------------
 
-    while((linelen = aux_getline(&line,&position_ptr)) > 0) {
-        
+    char* input_file = calloc(FILE_LEN, sizeof(char));
+    if (_FILE_getFileContent(DISK, FAT, CWD, filename, input_file) == -1){
+        free(input_file);
+        return -1;
+    }
+
+    FILE_CONTENT = calloc(FILE_LEN,1);
+    strcpy(FILE_CONTENT, input_file);
+
+    // --------------------------------------*/
+
+    fp = fmemopen(input_file, FILE_LEN, "r");
+    if (!fp) {
+        if (errno != ENOENT) {
+            perror("Opening file");
+            exit(1);
+        }
+        return 1;
+    }
+
+    char *line = NULL;
+    size_t linecap = 0;
+    ssize_t linelen;
+    while((linelen = getline(&line,&linecap,fp)) != -1) {
         if (linelen && (line[linelen-1] == '\n' || line[linelen-1] == '\r'))
             line[--linelen] = '\0';
         editorInsertRow(E.numrows,line,linelen);
-        free(line); // needed?
-        
     }
     free(line);
-
-    free(file_content);
-
+    free(input_file);
+    fclose(fp);
     E.dirty = 0;
     return 0;
 }
-
-
 
 /* Save the current file on disk. Return 0 on success, 1 on error. */
 int editorSave(void) {
     int len;
     char *buf = editorRowsToString(&len);
 
-    if (_FILE_writeFileContent(DISK, FAT, CWD, E.filename, buf, len) == -1) goto writeerr;
+    // ------------------------ MY CODE --------------------------------
+
+    FILE_LEN = len+1;
+    FILE_CONTENT = realloc(FILE_CONTENT, FILE_LEN);
+    strcpy(FILE_CONTENT, buf);
+
+    // -----------------------------------------------------------------
+
+    //int fd = open(E.filename,O_RDWR|O_CREAT,0644);
+    //if (fd == -1) goto writeerr;
+
+    /* Use truncate + a single write(2) call in order to make saving
+     * a bit safer, under the limits of what we can do in a small editor. */
+    //if (ftruncate(fd,len) == -1) goto writeerr;
+    //if (write(fd,buf,len) != len) goto writeerr;
+    //close(fd);
 
     free(buf);
     E.dirty = 0;
     editorSetStatusMessage("%d bytes written on disk", len);
     return 0;
 
-writeerr:
+/*writeerr:
     free(buf);
+    close(write_pipe);
+    //if (fd != -1) close(fd);
     editorSetStatusMessage("Can't save! I/O error");
-    return 1;
+    return 1;*/
 }
 
 /* ============================= Terminal update ============================ */
@@ -1226,7 +1221,7 @@ void editorMoveCursor(int key) {
 /* Process events arriving from the standard input, which is, the user
  * is typing stuff on the terminal. */
 #define KILO_QUIT_TIMES 3
-void editorProcessKeypress(int fd) {
+void editorProcessKeypress(int fd, char* quit_event) {
     /* When the file is modified, requires Ctrl-q to be pressed N times
      * before actually quitting. */
     static int quit_times = KILO_QUIT_TIMES;
@@ -1248,7 +1243,13 @@ void editorProcessKeypress(int fd) {
             quit_times--;
             return;
         }
-        exit(0);
+        // -------- My handling of the CTRL+Q event -----------------------
+
+        *quit_event = 1;
+
+        // -------------------------------------
+
+        //exit(0);
         break;
     case CTRL_S:        /* Ctrl-s */
         editorSave();
@@ -1332,22 +1333,81 @@ void initEditor(void) {
 
 
 
-int _EDITOR_start(char* filename, ucontext_t main_context) {
 
+int _KILO_start(char* filename, int file_len, int write_pipe_fd) {
+
+    FILE_LEN = file_len;
+    write_pipe = write_pipe_fd;
+    
     initEditor();
     editorSelectSyntaxHighlight(filename);
     editorOpen(filename);
     enableRawMode(STDIN_FILENO);
     editorSetStatusMessage(
         "HELP: Ctrl-S = save | Ctrl-Q = quit | Ctrl-F = find");
-    while(1) {
+
+
+    char quit_event = 0;
+    while(!quit_event) {
         editorRefreshScreen();
-        editorProcessKeypress(STDIN_FILENO);
+        editorProcessKeypress(STDIN_FILENO, &quit_event);
     }
 
-    // Going back to the main context
-    setcontext(&main_context);
+    if (write(write_pipe, &FILE_LEN, sizeof(int)) == -1){
+        printf("[KILO ERROR]: Unable to write to output pipe!\n");
+        close(write_pipe);
+        exit(-1);
+    }
 
+    if (write(write_pipe, FILE_CONTENT, FILE_LEN) == -1){
+        printf("[KILO ERROR]: Unable to write to output pipe!\n");
+        close(write_pipe);
+        exit(-1);
+    }
+    
+    close(write_pipe);
+    exit(0);
     return 0;
 }
+
+
+
+
+/*/ ---------------------------- main (OLD CODE) ------------------------------
+int main (int argc, char** argv){
+
+    if (argc < 5) return -1;
+    // argv[1] = filename
+    // argv[2] = file len
+    // argv[3] = read pipe fd
+    // argv[4] = write pipe fd
+
+    int read_pipe = atoi(argv[3]);
+    write_pipe = atoi(argv[4]);
+
+    FILE_LEN = atoi(argv[2]);
+    FILE_CONTENT = calloc(FILE_LEN, sizeof(char));
+    if (read(read_pipe, FILE_CONTENT, FILE_LEN) == -1){
+        printf("[ERROR]: unable to read from pipe!\n");
+        return -1;
+    }
+    close(read_pipe);
+
+
+    initEditor();
+    editorSelectSyntaxHighlight(argv[1]);
+    editorOpen(argv[1]);
+    enableRawMode(STDIN_FILENO);
+    editorSetStatusMessage(
+        "HELP: Ctrl-S = save | Ctrl-Q = quit | Ctrl-F = find");
+
+    char quit_event = 0;
+    while(1) {
+        editorRefreshScreen();
+        editorProcessKeypress(STDIN_FILENO, &quit_event);
+    }
+
+    return 0;
+
+}*/
 

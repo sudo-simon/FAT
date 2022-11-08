@@ -69,10 +69,15 @@ saves the current session as a .fat file on disk
 int _save(void* arg);
 
 /*
-TEMPORARY FUNCTION: allows to write the file from stdin.
+DEPRECATED: allows to write the file from stdin.
 To be removed when Kilo implementation is complete
 */
 int _write(void* arg);
+
+/*
+Prints the help message
+*/
+int _help(void* arg);
 
 
 
@@ -99,7 +104,7 @@ const static char* CMD_ARRAY[TOTAL_COMMANDS] = {
     "ls",       // 10
     "edit",     // 11
     "save",     // 12
-    "write"     // 13
+    "help"      // 13
 };
 
 /*
@@ -119,5 +124,5 @@ const static FN_PTR FN_ARRAY[TOTAL_COMMANDS] = {
     _ls,        // 10
     _edit,      // 11
     _save,      // 12
-    _write      // 13
+    _help       // 13
 };

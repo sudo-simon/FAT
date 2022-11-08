@@ -49,17 +49,9 @@ For more in depth explanations of how the single commands work, see the [command
 
 ## How to use
 
-The readline library is needed for the program to work:
+Go in the src/ folder and run the `make` command to compile.
 
-```bash
-sudo apt install libreadline-dev
-```
-
-Then just go in the src/ folder and run the `make` command to compile.
-
-The program can be executed both from src/fat.bin binary or from the [./FAT](./FAT) script (recommended).
-
-**NOTE:** the readline library causes a constant amount of memory leak, it will get changed with the [linenoise](https://github.com/antirez/linenoise) library.
+The program can then be executed both from src/fat.bin binary or from the [./FAT](./FAT) script (recommended).
 
 
 ## Commands
@@ -74,9 +66,8 @@ The program can be executed both from src/fat.bin binary or from the [./FAT](./F
 - [x] **rmdir \<dir\>**: deletes the directory passed as argument
 - [x] **cd \<dir\>**: changes the current working directory
 - [x] **ls**: lists the content of the current working directory
-- [x] **write \<file\>**: allows to write the new content of the file from scratch (**will be changed with edit**)
+- [x] **edit \<file\>**: allows to edit the file passed as argument with [Kilo](https://github.com/antirez/kilo) text editor
 - [x] **save**: saves the current FAT session to a file
-- [ ] **edit \<file\>**: allows to edit the file passed as argument with [Kilo](https://github.com/antirez/kilo) text editor
 
 
 ## Commands details
@@ -529,6 +520,122 @@ int _FS_listDir(DISK_STRUCT* DISK, FAT_STRUCT* FAT, FolderHandle* CWD){
         printf("[%d bytes] %s\n",file->size, file->name);
     }
 
+    return 0;
+
+}
+```
+
+### edit
+
+It opens the file passed as argument in the Kilo text editor: does so by forking into a subprocess that reads the needed file from it's copy of DISK, and then saves every subsequent edit on his temporary buffer.
+
+When the user quits Kilo, the new file size and its new content get written on a pipe that was originally passed as an argument to the _KILO_start() function.
+
+```c
+int _edit(void *arg){
+    
+    char* file_name = (char*) arg;
+    if (strlen(file_name) == 0){
+        printf("Name of the file to edit is needed\n");
+        return -1;
+    }
+    else if (strlen(file_name) > MAX_FILENAME_LEN){
+        printf("File name too long! It can be a maximum of %d characters long\n",MAX_FILENAME_LEN);
+        return -1;
+    }
+
+    if (! _FILE_existingFileName(CWD, file_name)){
+        printf("There is no file named %s in this folder\n",file_name);
+        return -1;
+    }
+
+    // ----------------------- EDITOR START -----------------------------
+
+    EDITOR_OPEN = 1;
+
+    char* file_content;
+    int file_len = CWD->fileList[_FILE_searchFileInCWD(CWD, file_name)]->size;
+
+    if (file_len == 0){
+        file_content = calloc(2,1);
+        strcpy(file_content, "");
+    }
+    else{
+        file_content = calloc(file_len, sizeof(char));
+        if (_FILE_getFileContent(DISK, FAT, CWD, file_name, file_content) == -1){
+            printf("[ERROR]: unable to read %s file",file_name);
+            goto editor_end;
+        }
+    }
+    
+
+    // ----------------- PIPE CREATION -----------------
+    int editor_pipe[2]; // [0] = r --- [1] = w
+    if (pipe(editor_pipe) == -1){
+        printf("[ERROR]: IPC handling\n");
+        goto editor_end;
+    }
+    
+    
+    // ---------------------- FORK ---------------------
+    pid_t editor_pid = fork();
+    if (editor_pid == -1){
+        printf("[ERROR]: fork error!\n");
+        close(editor_pipe[1]);
+        goto editor_end;
+    }
+
+
+    // KILO EDITOR PROCESS
+    if (editor_pid == 0){
+        close(editor_pipe[0]); // Closing read pipe
+        _KILO_start(file_name, file_len, editor_pipe[1]);
+        free(file_content);
+        //exit(0);
+        return 0;
+    }
+
+    // FAT MAIN PROCESS
+    else{
+        close(editor_pipe[1]);  // Closing write pipe
+
+        int kilo_exit_status;
+        wait(&kilo_exit_status);
+        
+        if (kilo_exit_status == -1){
+            goto editor_end;
+        }
+
+        // First 4 bytes of the pipe are the new file length
+        int new_len;
+        if (read(editor_pipe[0], &new_len, sizeof(int)) == -1){
+            printf("[ERROR] Unable to read form pipe!\n");
+            goto editor_end;
+        }
+
+        // Rest of the pipe is the new file content
+        char* saved_file = calloc(new_len, 1);
+        if (read(editor_pipe[0], saved_file, new_len) == -1){
+            printf("[ERROR] Unable to read form pipe!\n");
+            free(saved_file);
+            goto editor_end;
+        }
+
+        if (_FILE_writeFileContent(DISK, FAT, CWD, file_name, saved_file, new_len) == -1){
+            printf("[ERROR] Unable to write on DISK!\n");
+        }
+        free(saved_file);
+
+    }
+
+    // ----------------------- EDITOR STOP -----------------------------
+
+
+editor_end:
+    close(editor_pipe[0]);
+    shell_init();
+    EDITOR_OPEN = 0;
+    free(file_content);
     return 0;
 
 }

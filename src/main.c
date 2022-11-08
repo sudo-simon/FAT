@@ -4,13 +4,14 @@
 #include <string.h>
 // My headers
 #include "constants.h"
-#include "cli/shell.h"
+#include "cli/shell_linenoise.h"
 #include "cli/commands.h"
 #include "fs/disk.h"
 #include "fs/fat.h"
 #include "fs/file.h"
+#include "libs/linenoise/linenoise.h"
 
-char DEBUG_FLAG = 0;
+//char DEBUG_FLAG = 0;
 
 // DISK struct
 DISK_STRUCT* DISK;
@@ -22,7 +23,10 @@ FAT_STRUCT* FAT;
 FolderHandle* CWD;
 
 // FileHandle of the currently opened file
-FileHandle* O_FILE;
+////FileHandle* O_FILE;
+
+// Flag to check if an editor is open
+char EDITOR_OPEN = 0;
 
 
 int main(int argc, char** argv){
@@ -55,7 +59,7 @@ int main(int argc, char** argv){
         CWD = _FILE_getRoot(DISK, FAT);
 
     // O_FILE initialization
-    O_FILE = calloc(1, sizeof(struct FileHandle));
+    ////O_FILE = calloc(1, sizeof(struct FileHandle));
 
 
 
@@ -66,22 +70,15 @@ int main(int argc, char** argv){
     int n_args;
     short cmd_index;
 
-    // Input strings buffers
-    //char* input_msg = malloc(128*sizeof(char));
-    //char* input = malloc(MAX_INPUT_LEN*sizeof(char));
-    //char** split_input = calloc(2, sizeof(char*));
-    //split_input[0] = malloc(MAX_INPUT_LEN*sizeof(char));
-    //split_input[1] = malloc(MAX_INPUT_LEN*sizeof(char));
-    //int cmd_ret_value; // UNUSED
-
-
     char input_msg[128];
     char input[MAX_INPUT_LEN];
     char split_input_0[MAX_INPUT_LEN];
     char split_input_1[MAX_INPUT_LEN];
     char* split_input[2] = { split_input_0, split_input_1 };
 
-    shell_init();
+    // Linenoise initialization and clearing of the terminal
+    _SHELL_init();
+    _SHELL_clear();
 
 
     /*/DEBUG CODE
@@ -93,19 +90,25 @@ int main(int argc, char** argv){
     printf("CWD->fileList[0]->name = %s\n",CWD->fileList[0]->name);
     */
 
+
     
-    // Main loop
+    // -------------------------- MAIN LOOP --------------------------
+    ////char* line;
     while(1){
 
-        // Buffers reset
+        // Input buffers reset
         strncpy(input, "", MAX_INPUT_LEN);
         strncpy(split_input[0], "", MAX_INPUT_LEN);
         strncpy(split_input[1], "", MAX_INPUT_LEN);
         cmd_index = -1;
 
-        sprintf(input_msg, "\n[%s] %s >>> ",getenv("USER"),CWD->folderName);
-        take_input(input,input_msg);
-        n_args = str_split(input, split_input);
+        sprintf(input_msg, "[%s] %s >>> ",getenv("USER"),CWD->folderName);
+        printf("\n");
+
+        // Linenoise input taking
+        _SHELL_takeInput(input, input_msg);
+
+        n_args = str_split(input,split_input);
 
         if (n_args > 1){
             printf("Too many command arguments (max 1)\n");
@@ -127,14 +130,6 @@ int main(int argc, char** argv){
             if (strcmp(split_input[0],"quit") == 0){
                 if (n_args == 0){
 
-                    // Buffers deallocation
-
-                    //free(input_msg);
-                    //free(input);
-                    //free(split_input[0]);
-                    //free(split_input[1]);
-                    //free(split_input);
-
                     // DEBUG CODE
                     /*printf(
                         "DEBUG:\nDISK->disk = %ld \nDISK->persistentFlag = %d \nDISK->sessionFd = %d\n\n",
@@ -150,7 +145,7 @@ int main(int argc, char** argv){
                     }
                     _FAT_destroy(FAT);
                     _FILE_folderHandleDestroy(CWD);
-                    _FILE_fileHandleDestroy(O_FILE);
+                    ////_FILE_fileHandleDestroy(O_FILE);
 
                 }
                 else{
@@ -159,14 +154,22 @@ int main(int argc, char** argv){
                 }
             }
 
+            if (EDITOR_OPEN){
+                printf("Close the editor before performing any other operation\n");
+                continue;
+            }
+
             // Effective command call from function pointers array 
             (*FN_ARRAY[cmd_index])((void*)split_input[1]);
         
         }
+
         // Invalid command
-        else{
-            printf("%s is not a valid command\n",split_input[0]);
-        }
+        else 
+            printf("%s is not a valid command\nUse command \"help\" for a list of valid commands\n",split_input[0]);
+
+        
+        ////free(line);
 
     }
 

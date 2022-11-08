@@ -2,29 +2,47 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/ucontext.h>
 #include <unistd.h>
-#include <ucontext.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 // My headers
 #include "../constants.h"
-#include "../cli/shell.h"
+#include "../cli/shell_linenoise.h"
 #include "../fs/aux.h"
 #include "../fs/functions.h"
 #include "../fs/disk.h"
 #include "../fs/fat.h"
 #include "../fs/file.h"
-//#include "../editor/editor.h"
-
-/*/ Global variables used for context switching
-#define STACK_SIZE 65536    // 64KiB stack for the context switch to the editor
-char* EDITOR_FILENAME;      // Filename passed to the kilo editor
-ucontext_t MAIN_CONTEXT;    // main context use for context switching
-*/
+#include "../editor/kilo.h"
 
 extern DISK_STRUCT* DISK;
 extern FAT_STRUCT* FAT;
 extern FolderHandle* CWD;
-extern FileHandle* O_FILE;
+extern char EDITOR_OPEN;
+
+
+int _help(void *arg){
+    if (strlen((char*)arg) > 0)
+        printf("(help doesn't take any arguments)\n");
+    char help_msg[] = (
+        "FAT commands:\n"
+        "   quit: exits FAT\n"
+        "   clear: clears the terminal\n"
+        "   echo: prints argument to stdout\n"
+        "   mk: creates a file\n"
+        "   rm: deletes a file\n"
+        "   cat: reads the content of a file and prints it to stdout\n"
+        "   find: searches for a file or a folder with the name passed as argument\n"
+        "   mkdir: creates a directory\n"
+        "   rmdir: deletes a directory (and eventually its content)\n"
+        "   cd: changes the current working directory\n"
+        "   ls: lists the current directory content\n"
+        "   edit: opens the Kilo text editor to edit the file passed as argument\n"
+        "   save: saves the current FAT session on a permanent file on disk\n"
+    );
+    printf("%s",help_msg);
+    return 0;
+}
 
 
 int _quit(void* arg){
@@ -35,7 +53,8 @@ int _quit(void* arg){
 
 
 int _clear(void* args){
-    return shell_init();
+    _SHELL_clear();
+    return 0;
 }
 
 
@@ -244,18 +263,17 @@ int _ls(void *arg){
 }
 
 
-/*/ Auxiliary function for ucontext switching
-void _aux_editorStart(void){
-    _EDITOR_start(EDITOR_FILENAME, MAIN_CONTEXT);
+/*/ Auxiliary function for multithreading
+void* _aux_editorStart(void* arg){
+    system("x-terminal-emulator -e './fat.bin '");
+    return NULL;
 }
 */
 
+
+
 int _edit(void *arg){
-    //TODO: implementare Kilo
-
-    printf("_edit not implemented yet\n");
-
-    /*
+    
     char* file_name = (char*) arg;
     if (strlen(file_name) == 0){
         printf("Name of the file to edit is needed\n");
@@ -271,23 +289,93 @@ int _edit(void *arg){
         return -1;
     }
 
-    EDITOR_FILENAME = file_name;
-    ucontext_t editor_context;
+    // ----------------------- EDITOR START -----------------------------
 
-    getcontext(&editor_context);
-    char editor_stack[STACK_SIZE];
+    EDITOR_OPEN = 1;
 
-    editor_context.uc_stack.ss_sp = editor_stack;
-    editor_context.uc_stack.ss_size = STACK_SIZE;
-    editor_context.uc_stack.ss_flags = 0;
-    editor_context.uc_link = &MAIN_CONTEXT;
+    char* file_content;
+    int file_len = CWD->fileList[_FILE_searchFileInCWD(CWD, file_name)]->size;
 
-    // Trampoline for the editor_context is created (argument passing?)
-    makecontext(&editor_context, _aux_editorStart, 0, 0);
+    if (file_len == 0){
+        file_content = calloc(2,1);
+        strcpy(file_content, "");
+    }
+    else{
+        file_content = calloc(file_len, sizeof(char));
+        if (_FILE_getFileContent(DISK, FAT, CWD, file_name, file_content) == -1){
+            printf("[ERROR]: unable to read %s file",file_name);
+            goto editor_end;
+        }
+    }
+    
 
-    swapcontext(&MAIN_CONTEXT, &editor_context);
-    */
+    // ----------------- PIPE CREATION -----------------
+    int editor_pipe[2]; // [0] = r --- [1] = w
+    if (pipe(editor_pipe) == -1){
+        printf("[ERROR]: IPC handling\n");
+        goto editor_end;
+    }
+    
+    
+    // ---------------------- FORK ---------------------
+    pid_t editor_pid = fork();
+    if (editor_pid == -1){
+        printf("[ERROR]: fork error!\n");
+        close(editor_pipe[1]);
+        goto editor_end;
+    }
 
+
+    // KILO EDITOR PROCESS
+    if (editor_pid == 0){
+        close(editor_pipe[0]); // Closing read pipe
+        _KILO_start(file_name, file_len, editor_pipe[1]);
+        free(file_content);
+        //exit(0);
+        return 0;
+    }
+
+    // FAT MAIN PROCESS
+    else{
+        close(editor_pipe[1]);  // Closing write pipe
+
+        int kilo_exit_status;
+        wait(&kilo_exit_status);
+        
+        if (kilo_exit_status == -1){
+            goto editor_end;
+        }
+
+        // First 4 bytes of the pipe are the new file length
+        int new_len;
+        if (read(editor_pipe[0], &new_len, sizeof(int)) == -1){
+            printf("[ERROR] Unable to read form pipe!\n");
+            goto editor_end;
+        }
+
+        // Rest of the pipe is the new file content
+        char* saved_file = calloc(new_len, 1);
+        if (read(editor_pipe[0], saved_file, new_len) == -1){
+            printf("[ERROR] Unable to read form pipe!\n");
+            free(saved_file);
+            goto editor_end;
+        }
+
+        if (_FILE_writeFileContent(DISK, FAT, CWD, file_name, saved_file, new_len) == -1){
+            printf("[ERROR] Unable to write on DISK!\n");
+        }
+        free(saved_file);
+
+    }
+
+    // ----------------------- EDITOR STOP -----------------------------
+
+
+editor_end:
+    close(editor_pipe[0]);
+    _SHELL_clear();
+    EDITOR_OPEN = 0;
+    free(file_content);
     return 0;
 
 }
